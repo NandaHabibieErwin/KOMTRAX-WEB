@@ -1,168 +1,208 @@
+<style lang="css" module>
+#chart {
+    max-width: 760px;
+    margin: 35px auto;
+    opacity: 0.9;
+}
+
+.arrow_box {
+    position: relative;
+    background: #555;
+    border: 2px solid #000000;
+}
+
+.arrow_box:after,
+.arrow_box:before {
+    right: 100%;
+    top: 50%;
+    border: solid transparent;
+    content: " ";
+    height: 0;
+    width: 0;
+    position: absolute;
+    pointer-events: none;
+}
+
+.arrow_box:after {
+    border-color: rgba(85, 85, 85, 0);
+    border-right-color: #555;
+    border-width: 10px;
+    margin-top: -10px;
+}
+
+.arrow_box:before {
+    border-color: rgba(0, 0, 0, 0);
+    border-right-color: #000000;
+    border-width: 13px;
+    margin-top: -13px;
+}
+
+#chart .apexcharts-tooltip {
+    color: #fff;
+    transform: translateX(10px) translateY(10px);
+    overflow: visible !important;
+    white-space: normal !important;
+}
+
+#chart .apexcharts-tooltip span {
+    padding: 5px 10px;
+    display: inline-block;
+}
+</style>
+
 <template>
-    <div>
-        <apexchart width="350px" height="253px" type="area" :options="options" :series="series"></apexchart>
-    </div>
+    <v-container>
+        <v-row>
+            <v-col cols="12">
+                <v-pagination v-model="page" :length="TotalPages" total-visible="7"
+                    @input="UpdatePaginatedCharts"></v-pagination>
+            </v-col>
+        </v-row>
+
+        <Grid :charts="PaginatedCharts"></Grid>
+
+    </v-container>
 </template>
 
 <script>
 import * as XLSX from 'xlsx';
-import { UploadExcelFile, GetExcelFile, LoadExcelFile } from '@/excel';
+import { UploadExcelFile, LoadExcelFile } from '@/excel';
+import Grid from '@/Components/ChartnCard/Grid.vue';
+
 export default {
+    components: {
+        Grid,
+    },
     data() {
         return {
-            options: {
-                chart: {
-                    id: 'vuechart-example',
-                    toolbar: {
-                        show: false,
-                    },
-                    animations: {
-                        enabled: true,
-                        easing: 'easeinout',
-                        speed: 800,
-                        animateGradually: {
-                            enabled: true,
-                            delay: 150
-                        },
-                        dynamicAnimation: {
-                            enabled: true,
-                            speed: 350
-                        }
-                    },
-                },
-                xaxis: {
-                    min: 1,
-                    max: 30,
-                    tickAmount: 5,
-                    hideOverlappingLabels: true,
-                },
-                yaxis: {
-                    show: true,
-                    min: 0,
-                    max: 24,
-                    tickAmount: 4,
-                },
-                tooltip: {
-                    enabled: true,
-                    enabledOnSeries: true,
-                    shared: true,
-                    intersect: false,
-                    theme: 'dark',
-                    x: {
-                        show: true,
-                        format: 'dd MMM',
-                    },
-                    y: {
-                        title: {
-                            formatter: (seriesName) => seriesName,
-                        },
-                    },
-                    fixed: {
-                        enabled: true,
-                        position: 'topRight',
-                    },
-                },
-                dataLabels: {
-                    enabled: false,
-                },
-
-                theme: {
-                    monochrome: {
-                        enabled: true,
-                        color: '#FFD500',
-                        shadeTo: 'dark',
-                        shadeIntensity: 0.15
-                    }
-                },
-                stroke: {
-                    width: 2
-                },
-            },
-            series: [
-                {
-                    name: 'Working Hour',
-                    data: [],
-                },
-                {
-                    name: 'Actual Working Hour',
-                    data: [],
-                },
-            ],
+            charts: [],
+            PaginatedCharts: [],
+            page: 1,
+            itemsPerPage: 8,
         };
+    },
+    watch: {
+        page() {
+            this.UpdatePaginatedCharts();
+        }
+    },
+    computed: {
+        TotalPages() {
+            return Math.ceil(this.charts.length / this.itemsPerPage);
+        },
     },
     mounted() {
 
-        this.fetchLatestExcelFile();
+        this.GetExcel();
     },
     methods: {
-        async handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
+        async GetExcel() {
             try {
-
-                const response = await UploadExcelFile(file);
-                const fileId = response.file_id;
-
-
-                this.fetchExcelFileData(fileId);
-            } catch (error) {
-                console.error('Error uploading file:', error);
-            }
-        },
-        async fetchExcelFileData(fileId) {
-            try {
-                const response = await GetExcelFile(fileId);
-                this.fileUrl = response.file_path;
+                const response = await LoadExcelFile();
+                this.fileUrl = response.fileUrl;
                 this.filename = response.filename;
 
-
-                this.ProcessExcelFile(this.fileUrl);
-                updateChart(this, labels, values);
+                await this.processFile(this.fileUrl);
             } catch (error) {
                 console.error('Error fetching Excel file:', error);
             }
         },
-        async fetchLatestExcelFile() {
-            try {
-                const response = await LoadExcelFile();
-                this.fileUrl = response.fileUrl;
-                this.fileId = response.fileId;
-                this.filename = response.filename;
-
-                // Process the Excel file and update the chart
-                await this.processExcelFile(this.fileUrl);
-            } catch (error) {
-                console.error('Error fetching the latest Excel file:', error);
-            }
-        },
-        async processExcelFile(fileUrl) {
+        async processFile(fileUrl) {
             try {
                 const response = await fetch(fileUrl);
-
-
                 const data = await response.arrayBuffer();
 
                 const workbook = XLSX.read(data, { type: 'array' });
 
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                workbook.SheetNames.forEach((sheetName, sheetIndex) => {
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    console.log(jsonData);
 
-                const labels = jsonData.slice(1).map(row => row[0]);
-                const values = jsonData.slice(1).map(row => row[8]);
-                console.log(labels);
-                console.log(values);
+                    const labels = jsonData.slice(1).map(row => row[7] || '');
+                    const WorkingHour = jsonData.slice(1).map(row => row[5] || 0);
+                    const ActualWorkingHour = jsonData.slice(1).map(row => row[6] || 0);
 
-                this.updateChart(labels, values); // Update the chart
+                    const UnitChart = {
+                        options: {
+                            chart: {
+                                id: `Unit-Data-${sheetIndex}`,
+                                toolbar: { show: false },
+                                animations: {
+                                    enabled: true,
+                                    easing: 'easeinout',
+                                    speed: 800,
+                                },
+                                zoom: {
+                                    enabled: true,
+                                    type: 'x',
+                                    autoScaleYaxis: true,
+                                }
+                            },
+                            xaxis: {
+                                categories: labels,
+                                tickAmount: 5,
+                                hideOverlappingLabels: true,
+                            },
+                            yaxis: {
+                                min: 0,
+                                max: Math.max(...WorkingHour) + 5,
+                                tickAmount: 4,
+                            },
+                            tooltip: {
+                                enabled: true,
+                                shared: true,
+                                theme: 'light',
+                                custom: function ({ series, seriesIndex, dataPointIndex, w }) {
+                                    return (
+                                        '<div class="arrow_box">' +
+                                        "<span>" +
+                                        w.globals.labels[dataPointIndex] +
+                                        ": " +
+                                        series[seriesIndex][dataPointIndex] +
+                                        "</span>" +
+                                        "</div>"
+                                    );
+                                },
+                                x: {
+                                    show: false,
+                                }
+                            },
+                            dataLabels: { enabled: false },
+                            theme: {
+                                monochrome: {
+                                    enabled: true,
+                                    color: '#FFD500',
+                                    shadeTo: 'dark',
+                                    shadeIntensity: 0.15,
+                                },
+                            },
+                            stroke: { width: 2 },
+                        },
+                        series: [
+                            {
+                                name: 'Working Hour',
+                                data: WorkingHour,
+                            },
+                            {
+                                name: 'Actual Working Hour',
+                                data: ActualWorkingHour,
+                            },
+                        ],
+                    };
+
+                    this.charts.push(UnitChart);
+                });
+                this.UpdatePaginatedCharts();
             } catch (error) {
                 console.error('Error processing Excel file:', error);
             }
         },
-        updateChart(labels, values) {
-            this.options.xaxis.categories = labels;
-            this.series[0].data = values;
-        },
+        UpdatePaginatedCharts() {
+            const start = (this.page - 1) * this.itemsPerPage;
+            const end = start + this.itemsPerPage;
+            this.PaginatedCharts = this.charts.slice(start, end);
+        }
     },
 };
 </script>

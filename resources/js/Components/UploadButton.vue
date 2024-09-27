@@ -1,4 +1,5 @@
 <template>
+
     <v-btn
       :color="variant"
       :small="size === 'small'"
@@ -11,7 +12,7 @@
   </template>
 
   <script>
-  
+
   export default {
     name: 'UploadButton',
     props: {

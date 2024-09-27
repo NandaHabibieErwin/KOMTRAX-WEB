@@ -18,7 +18,7 @@
       </v-file-input>
 
       <UploadButton
-        :variant="'primary'"
+        :variant="'warning'"
         :size="'medium'"
         @click="uploadFiles"
       >
@@ -30,6 +30,7 @@
   <script>
   import UploadButton from './UploadButton.vue';
   import LineChart from './ChartnCard/LineChart.vue';
+  import  {UploadExcelFile}  from '@/excel';
   export default {
     components: {
       UploadButton,
@@ -54,7 +55,7 @@
         try {
 
           for (let file of this.files) {
-            await this.uploadFile(file);
+            await UploadExcelFile(file);
           }
 
           console.log('Files successfully uploaded');
@@ -65,20 +66,6 @@
         }
         finally {
             this.Upload = false;
-        }
-      },
-      async uploadFile(file) {
-        try {
-          const formData = new FormData();
-          formData.append('file', file, file.name);
-
-          const response = await axios.post('/upload-excel', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      if (response.status !== 200) throw new Error('Failed to upload file');
-          console.log('File uploaded:', file.name);
-        } catch (error) {
-          console.error('Error in uploadFile:', error);
         }
       },
     },
