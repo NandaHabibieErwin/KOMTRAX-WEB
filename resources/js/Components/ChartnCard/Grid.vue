@@ -8,7 +8,6 @@ import Card from '@/Components/ChartnCard/Card.vue';
     <template>
         <v-row no-gutters>
             <v-col v-for="(chart, index) in charts" :key="index">
-                <h3>Sheet {{ index + 1 }}</h3>
                 <apexchart :options="chart.options" :series="chart.series" width="350px" height="253px" type="area">
                 </apexchart>
             </v-col>
