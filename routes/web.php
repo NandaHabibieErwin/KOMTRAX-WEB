@@ -28,6 +28,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/get-excel', [UnitTrackerController::class, 'ReadMainExcel'])->name('ReadMainExcel');
     Route::get('/enroll', [UnitTrackerController::class, 'index'])->name('enroll');
     Route::get('/upload', [AdminController::class, 'index'])->name('upload');
+    Route::get('/delete-duplicate', [UnitTrackerController::class, 'DeleteDuplicateData'])->name('DeleteDuplicate');
 });
 
 require __DIR__.'/auth.php';

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 use App\Exports\DataExport;
+use App\Exports\RowHandlerArray;
 use App\Exports\RowHandlerExport;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
@@ -30,7 +31,7 @@ class UnitTrackerController extends Controller
             $data = Excel::toArray([], $path);
 
             return response()->json([
-                'data' => $data,                // This will be an array of sheets, each containing its rows
+                'data' => $data,
                 'filepath' => Storage::url($filePath),
                 'filename' => basename($filePath),
             ], 200);
@@ -44,6 +45,7 @@ class UnitTrackerController extends Controller
         \Log::info('Uploading file:', ['file' => $request->file('file')]);
 
         //Disabled for now, this cant detect xlsx file correctly, causing it to always fail uploading
+
         /*  $request->validate([
               'file' => 'required|mimes:xlsx,xls',
           ]);*/
@@ -66,13 +68,6 @@ class UnitTrackerController extends Controller
         }
 
         /*
-        Compare Column, it should be the date
-        Column start from 0 = A
-        This prevents duplicate data
-        */
-        $compareColumnIndex = [120];
-
-        /*
         Appended Column
         0 = Machine Type (A)
         1 = Manufacturer (B)
@@ -92,13 +87,23 @@ class UnitTrackerController extends Controller
                 $currentSheetIndex = $rowIndex;
                 $newRowData = [];
                 foreach ($columnsToAppend as $colIndex) {
-                    $newRowData[] = isset($row[$colIndex]) ? $row[$colIndex] : null;
+                    $value = isset($row[$colIndex]) ? $row[$colIndex] : null;
+
+                    // Convert Working Hour (67) and Actual Working Hour (68) to dates
+                    if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $value)) {
+                        $newRowData[] = \Carbon\Carbon::createFromFormat('m/d/Y', $value)->toDateString();
+
+                    } else {
+                        $newRowData[] = $value;
+                    }
                 }
+
                 if (isset($existingData[$currentSheetIndex])) {
                     $sheetData = $existingData[$currentSheetIndex];
                 } else {
                     $sheetData = [];
                 }
+
                 $sheets[$currentSheetIndex] = new DataExport($sheetData, [$newRowData]);
             }
         }
@@ -111,14 +116,55 @@ class UnitTrackerController extends Controller
         $originalName = $uploadedFile->getClientOriginalName();
         \Log::info('Data appended from file: ' . $originalName);
 
+        $this->DeleteDuplicateData();
+
         return response()->json(['message' => 'Data appended successfully.'], 200);
-
-
     }
-    public function AddData()
+
+    public function DeleteDuplicateData()
     {
+        $filePath = 'excel/UnitTracker.xlsx';
 
+        if (!Storage::disk('public')->exists($filePath)) {
+            return response()->json(['message' => 'UnitTracker.xlsx file not found.'], 404);
+        }
+
+        $path = Storage::disk('public')->path($filePath);
+        $existingData = Excel::toArray([], $path);
+
+
+        $filteredData = [];
+
+        foreach ($existingData as $sheetIndex => $sheet) {
+            $dateFroms = [];
+            $filteredSheet = [];
+
+            foreach ($sheet as $rowIndex => $row) {
+
+                $dateFrom = isset($row[7]) ? $row[7] : null;
+
+
+                if ($dateFrom && in_array($dateFrom, $dateFroms)) {
+
+                    \Log::info("Duplicate DateFrom found and removed", ['dateFrom' => $dateFrom, 'rowIndex' => $rowIndex]);
+                    continue;
+                }
+
+                $dateFroms[] = $dateFrom;
+                $filteredSheet[] = $row;
+            }
+
+
+            $filteredData[$sheetIndex] = new RowHandlerArray($filteredSheet);
+        }
+        $multiSheetExport = new RowHandlerExport($filteredData);
+        Excel::store($multiSheetExport, $filePath, 'public');
+
+        return response()->json(['message' => 'Duplicate rows based on DateFrom removed within each sheet successfully.'], 200);
     }
+
+
+
 
     public function getExcelFile($id)
     {
@@ -128,3 +174,5 @@ class UnitTrackerController extends Controller
         return response()->json(['file_path' => $fileUrl], 200);
     }
 }
+
+
