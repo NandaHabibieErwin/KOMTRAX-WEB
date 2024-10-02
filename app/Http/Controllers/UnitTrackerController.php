@@ -30,6 +30,24 @@ class UnitTrackerController extends Controller
             $path = Storage::disk('public')->path($filePath);
             $data = Excel::toArray([], $path);
 
+            $SortColumn = 7;
+            foreach ($data as &$sheet) {
+                $header = array_shift($sheet);
+
+                usort($sheet, function ($a, $b) use ($SortColumn) {
+
+                    $dateA = isset($a[$SortColumn]) ? \Carbon\Carbon::parse($a[$SortColumn]) : null;
+                    $dateB = isset($b[$SortColumn]) ? \Carbon\Carbon::parse($b[$SortColumn]) : null;
+
+                    if ($dateA && $dateB) {
+                        return $dateA->getTimestamp() <=> $dateB->getTimestamp();
+                    }
+
+                    return $dateA ? 1 : ($dateB ? -1 : 0);
+                });
+                array_unshift($sheet, $header);
+            }
+
             return response()->json([
                 'data' => $data,
                 'filepath' => Storage::url($filePath),
@@ -48,7 +66,9 @@ class UnitTrackerController extends Controller
 
         /*  $request->validate([
               'file' => 'required|mimes:xlsx,xls',
-          ]);*/
+          ]);
+
+          */
         $filePath = 'excel/UnitTracker.xlsx';
 
         if (!Storage::disk('public')->exists($filePath)) {
@@ -74,12 +94,18 @@ class UnitTrackerController extends Controller
         2 = Model (C)
         3 = Type (D)
         4 = Serial Number (E)
+        27 = Customer Name (AB)
         67 = Working Hour (BP)
         68 = Actual Working Hour (BQ)
         120 = Period From (DQ)
         121 = Period To (DR)
+        5 = Customer Machine No (F)
+        61 = SMR[H] (BJ)
+        94 = Fuel Consumption [L/H] (CQ)
+        87 = E Mode Ratio
+        78 = E Mode In Actual Working Hour (CA)
         */
-        $columnsToAppend = [0, 1, 2, 3, 4, 67, 68, 120, 121];
+        $columnsToAppend = [0, 1, 2, 3, 4, 67, 68, 120, 121, 27, 5, 61, 94, 87, 78];
         $sheets = [];
 
         foreach ($uploadedData as $sheetIndex => $sheet) {
@@ -116,6 +142,7 @@ class UnitTrackerController extends Controller
         $originalName = $uploadedFile->getClientOriginalName();
         \Log::info('Data appended from file: ' . $originalName);
 
+        // Due to finnicky implementation, a new function is needed to handle duplicate data, trade off is slower upload
         $this->DeleteDuplicateData();
 
         return response()->json(['message' => 'Data appended successfully.'], 200);
@@ -140,20 +167,28 @@ class UnitTrackerController extends Controller
             $filteredSheet = [];
 
             foreach ($sheet as $rowIndex => $row) {
-
                 $dateFrom = isset($row[7]) ? $row[7] : null;
 
+                if ($dateFrom) {
+                    if (isset($dateFroms[$dateFrom])) {
+                        $existingRow = &$filteredSheet[$dateFroms[$dateFrom]];
 
-                if ($dateFrom && in_array($dateFrom, $dateFroms)) {
+                        foreach ($row as $colIndex => $value) {
+                            if (!isset($existingRow[$colIndex]) || $existingRow[$colIndex] === null) {
+                                $existingRow[$colIndex] = $value;
+                            }
+                        }
 
-                    \Log::info("Duplicate DateFrom found and removed", ['dateFrom' => $dateFrom, 'rowIndex' => $rowIndex]);
-                    continue;
+                        \Log::info("New columns added to existing DateFrom", ['dateFrom' => $dateFrom, 'rowIndex' => $rowIndex]);
+                    } else {
+
+                        $dateFroms[$dateFrom] = count($filteredSheet);
+                        $filteredSheet[] = $row;
+                    }
+                } else {
+                    $filteredSheet[] = $row;
                 }
-
-                $dateFroms[] = $dateFrom;
-                $filteredSheet[] = $row;
             }
-
 
             $filteredData[$sheetIndex] = new RowHandlerArray($filteredSheet);
         }

@@ -13,8 +13,8 @@
                 </v-file-input>
             </v-col>
             <v-col>
-                <UploadButton :variant="'warning'" :size="'medium'" @click="uploadFiles">
-                    Upload Files
+                <UploadButton :variant="'warning'" :size="'small'" @click="uploadFiles">
+                    <span class="text-white font-semibold">Upload File</span>
                 </UploadButton>
             </v-col>
         </v-row>

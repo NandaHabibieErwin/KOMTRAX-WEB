@@ -115,13 +115,74 @@ export default {
                 const workbook = XLSX.read(data, { type: 'array' });
 
                 workbook.SheetNames.forEach((sheetName, sheetIndex) => {
+                    if (sheetIndex === 0) return;
                     const worksheet = workbook.Sheets[sheetName];
                     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                    console.log(jsonData);
 
-                    const labels = jsonData.slice(1).map(row => row[7] || '');
-                    const WorkingHour = jsonData.slice(1).map(row => row[5] || 0);
-                    const ActualWorkingHour = jsonData.slice(1).map(row => row[6] || 0);
+
+                    const header = jsonData[0];
+
+
+                    const sortedData = jsonData.slice(1).sort((a, b) => {
+                        const dateA = a[7] ? new Date(a[7]) : null;
+                        const dateB = b[7] ? new Date(b[7]) : null;
+
+                        if (dateA && dateB) {
+                            return dateA - dateB;
+                        }
+
+                        return dateA ? 1 : (dateB ? -1 : 0);
+                    });
+
+
+                    const sortedJsonData = [header, ...sortedData];
+
+
+                    //                    console.log(sortedJsonData);
+
+                    const labels = sortedJsonData.slice(1).map(row => {
+                        const dateStr = row[7] || '';
+                        const dateObj = dateStr ? new Date(dateStr) : null;
+                        if (dateObj) {
+                            return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        }
+                        return '';
+
+                    });
+                    const WorkingHour = sortedJsonData.slice(1).map(row => row[5] || 0);
+                    const ActualWorkingHour = sortedJsonData.slice(1).map(row => row[6] || 0);
+                    const CustomerMachine = sortedJsonData.slice(1).map(row => row[10] || 0).slice(-1);
+                    const Type = sortedJsonData.slice(1).map(row => row[3] || 0);
+                    const SerialNumber = sortedJsonData.slice(1).map(row => row[4] || 0).slice(-1);
+                    const SMR = sortedJsonData.slice(1).map(row => row[11] || 0).slice(-1);
+                    const FuelConsumption = sortedJsonData.slice(1).map(row => row[12] || 0);
+                    const AverageFuelConsumption = (FuelConsumption.reduce((a, b) => a + b, 0) / FuelConsumption.length).toFixed(2);
+                    const data = sortedJsonData.slice(1).map(row => {
+
+                        if (!row[5] && !row[6]) {
+                            return null;
+                        } else if ((row[5] && row[6]) && !row[14]) {
+                            return 0; //
+                        } else {
+                            return row[12] != null ? row[12] : 0;
+                        }
+                    });
+
+                    const validData = data.filter(value => value !== null);
+
+                    const ERatio = validData.length ? (validData.reduce((a, b) => a + b, 0) / validData.length).toFixed(2) : null;
+
+                    let PRatio;
+                    if (ERatio === null) {
+                        PRatio = 0;
+                    } else if (ERatio == 0) {
+                        PRatio = 100;
+                    } else {
+                        PRatio = 100 - ERatio;
+                    }
+
+                    const ChartTitle = CustomerMachine + "-" + SerialNumber;
+                    const AdditionalTitle = "SMR: " + SMR + " H\tFuel: " + AverageFuelConsumption + " " + "L/H" + PRatio.toFixed(2);
 
                     const UnitChart = {
                         options: {
@@ -139,36 +200,54 @@ export default {
                                     autoScaleYaxis: true,
                                 }
                             },
+                            title: {
+                                text: ChartTitle,
+                                align: 'left',
+                                margin: 10,
+                                offsetX: 0,
+                                offsetY: 0,
+                                floating: false,
+                                style: {
+                                    fontSize: '14px',
+                                    fontWeight: 'bold',
+                                    fontFamily: undefined,
+                                    color: '#263238'
+                                },
+                            },
+                            title: {
+                                text: ChartTitle,
+                                align: 'left',
+                                margin: 10,
+                                offsetX: 0,
+                                offsetY: 0,
+                                floating: false,
+                                style: {
+                                    fontSize: '14px',
+                                    fontWeight: 'bold',
+                                    fontFamily: undefined,
+                                    color: '#263238'
+                                },
+                            },
+                            subtitle:
+                            {
+                                text: AdditionalTitle,
+                                align: 'right',
+                                margin: 10,
+                                offsetX: 0,
+                                offsetY: 0,
+                                floating: false,
+                                style: {
+                                    fontSize: '12px',
+                                    fontWeight: 'normal',
+                                    fontFamily: undefined,
+                                    color: '#9699a2'
+                                },
+                            },
                             xaxis: {
                                 categories: labels,
                                 tickAmount: 5,
                                 hideOverlappingLabels: true,
                             },
-                            yaxis: {
-                                min: 0,
-                                max: Math.max(...WorkingHour) + 5,
-                                tickAmount: 4,
-                            },
-                            tooltip: {
-                                enabled: true,
-                                shared: true,
-                                theme: 'light',
-                                custom: function ({ series, seriesIndex, dataPointIndex, w }) {
-                                    return (
-                                        '<div class="arrow_box">' +
-                                        "<span>" +
-                                        w.globals.labels[dataPointIndex] +
-                                        ": " +
-                                        series[seriesIndex][dataPointIndex] +
-                                        "</span>" +
-                                        "</div>"
-                                    );
-                                },
-                                x: {
-                                    show: false,
-                                }
-                            },
-                            dataLabels: { enabled: false },
                             theme: {
                                 monochrome: {
                                     enabled: true,
@@ -177,7 +256,23 @@ export default {
                                     shadeIntensity: 0.15,
                                 },
                             },
-                            stroke: { width: 2 },
+                            yaxis: {
+                                min: 0,
+                                max: 24,//Math.max(...WorkingHour) + 5,
+                                tickAmount: 1,
+                            },
+                            tooltip: {
+                                enabled: true,
+                                shared: true,
+                                theme: 'light',
+                                intersect: false,
+                                x: {
+                                    show: false,
+                                }
+                            },
+                            dataLabels: { enabled: false },
+
+                            stroke: { width: 3, curve: 'smooth' },
                         },
                         series: [
                             {
