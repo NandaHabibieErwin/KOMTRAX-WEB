@@ -6,10 +6,12 @@ import Card from '@/Components/ChartnCard/Card.vue';
 
 
     <template>
-        <v-row no-gutters>
-            <v-col v-for="(chart, index) in charts" :key="index">
-                <apexchart :options="chart.options" :series="chart.series" width="350px" height="253px" type="area">
-                </apexchart>
+        <v-row dense>
+            <v-col v-for="(chart, index) in charts" :key="index" class="py-3">
+                <Card :chart="chart" />
+
+             <!--   <apexchart :options="chart.options" :series="chart.series" width="350px" height="253px" type="area">
+                </apexchart>-->
             </v-col>
             <v-responsive width="100%"></v-responsive>
         </v-row>

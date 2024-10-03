@@ -16,8 +16,23 @@ import UploadFile from '@/Components/UploadFile.vue';
         </template>
 
         <div class="py-12">
-            <div class="max-w-9xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="max-w-9xl mx-auto sm:px-4 lg:px-5">
+                <div class="bg-gray-100 overflow-hidden shadow-sm sm:rounded-lg">
+                        <v-sheet elevation="6">
+                          <v-tabs
+                            bg-color="indigo"
+                            next-icon="mdi-arrow-right-bold-box-outline"
+                            prev-icon="mdi-arrow-left-bold-box-outline"
+                            show-arrows
+                          >
+                            <v-tab
+                              v-for="i in 30"
+                              :key="i"
+                              :text="`Item ${i}`"
+                            ></v-tab>
+                          </v-tabs>
+                        </v-sheet>
+
                     <UnitChart></UnitChart>
                 </div>
             </div>

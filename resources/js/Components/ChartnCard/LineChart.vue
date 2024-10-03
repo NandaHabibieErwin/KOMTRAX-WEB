@@ -54,7 +54,7 @@
     <v-container>
         <v-row>
             <v-col cols="12">
-                <v-pagination v-model="page" :length="TotalPages" total-visible="7"
+                <v-pagination class="pagination mb-2" v-model="page" :length="TotalPages" total-visible="7"
                     @input="UpdatePaginatedCharts"></v-pagination>
             </v-col>
         </v-row>
@@ -78,7 +78,7 @@ export default {
             charts: [],
             PaginatedCharts: [],
             page: 1,
-            itemsPerPage: 8,
+            itemsPerPage: 9,
         };
     },
     watch: {
@@ -152,37 +152,20 @@ export default {
                     const WorkingHour = sortedJsonData.slice(1).map(row => row[5] || 0);
                     const ActualWorkingHour = sortedJsonData.slice(1).map(row => row[6] || 0);
                     const CustomerMachine = sortedJsonData.slice(1).map(row => row[10] || 0).slice(-1);
-                    const Type = sortedJsonData.slice(1).map(row => row[3] || 0);
+                    const Model = sortedJsonData.slice(1).map(row => row[2] || 0).slice(-1);
                     const SerialNumber = sortedJsonData.slice(1).map(row => row[4] || 0).slice(-1);
                     const SMR = sortedJsonData.slice(1).map(row => row[11] || 0).slice(-1);
                     const FuelConsumption = sortedJsonData.slice(1).map(row => row[12] || 0);
                     const AverageFuelConsumption = (FuelConsumption.reduce((a, b) => a + b, 0) / FuelConsumption.length).toFixed(2);
-                    const data = sortedJsonData.slice(1).map(row => {
+                    const EModeActualWorkingHour = sortedJsonData.slice(1).map(row => row[14] || 0).filter(val => !isNaN(val)).filter(val => !isNaN(val) && val > 0);
+                    const TotalEModeActualWorkingHour = (EModeActualWorkingHour.reduce((a, b) => a + b, 0));
+                    const ActualWorkingHourToFilter = ActualWorkingHour.filter(val => !isNaN(val) && val > 0);
+                    const TotalActualWorkingHour = ActualWorkingHour.reduce((a, b) => a + b, 0);
+                    const PMode = ((TotalActualWorkingHour - TotalEModeActualWorkingHour) / TotalActualWorkingHour) * 100;
 
-                        if (!row[5] && !row[6]) {
-                            return null;
-                        } else if ((row[5] && row[6]) && !row[14]) {
-                            return 0; //
-                        } else {
-                            return row[12] != null ? row[12] : 0;
-                        }
-                    });
+                    const ChartTitle = Model+"-" + CustomerMachine + "-" + SerialNumber;
+                    const AdditionalTitle = "SMR: " + SMR + " H<br>Fuel: " + AverageFuelConsumption + " " + "L/H<br>PMode: " + PMode.toFixed(1)+"%";
 
-                    const validData = data.filter(value => value !== null);
-
-                    const ERatio = validData.length ? (validData.reduce((a, b) => a + b, 0) / validData.length).toFixed(2) : null;
-
-                    let PRatio;
-                    if (ERatio === null) {
-                        PRatio = 0;
-                    } else if (ERatio == 0) {
-                        PRatio = 100;
-                    } else {
-                        PRatio = 100 - ERatio;
-                    }
-
-                    const ChartTitle = CustomerMachine + "-" + SerialNumber;
-                    const AdditionalTitle = "SMR: " + SMR + " H\tFuel: " + AverageFuelConsumption + " " + "L/H" + PRatio.toFixed(2);
 
                     const UnitChart = {
                         options: {
@@ -200,21 +183,7 @@ export default {
                                     autoScaleYaxis: true,
                                 }
                             },
-                            title: {
-                                text: ChartTitle,
-                                align: 'left',
-                                margin: 10,
-                                offsetX: 0,
-                                offsetY: 0,
-                                floating: false,
-                                style: {
-                                    fontSize: '14px',
-                                    fontWeight: 'bold',
-                                    fontFamily: undefined,
-                                    color: '#263238'
-                                },
-                            },
-                            title: {
+                        /*    title: {
                                 text: ChartTitle,
                                 align: 'left',
                                 margin: 10,
@@ -235,14 +204,14 @@ export default {
                                 margin: 10,
                                 offsetX: 0,
                                 offsetY: 0,
-                                floating: false,
+                                floating: true,
                                 style: {
                                     fontSize: '12px',
                                     fontWeight: 'normal',
                                     fontFamily: undefined,
-                                    color: '#9699a2'
+                                    color: 'black'
                                 },
-                            },
+                            }, */
                             xaxis: {
                                 categories: labels,
                                 tickAmount: 5,
@@ -284,6 +253,8 @@ export default {
                                 data: ActualWorkingHour,
                             },
                         ],
+                        ChartTitle: ChartTitle,
+                        AdditionalTitle: AdditionalTitle,
                     };
 
                     this.charts.push(UnitChart);

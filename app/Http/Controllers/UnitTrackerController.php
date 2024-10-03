@@ -102,10 +102,10 @@ class UnitTrackerController extends Controller
         5 = Customer Machine No (F)
         61 = SMR[H] (BJ)
         94 = Fuel Consumption [L/H] (CQ)
-        87 = E Mode Ratio
-        78 = E Mode In Actual Working Hour (CA)
+        96 = Idling Hour Ratio[%] (CS)
+        72 = E Mode In Actual Working Hour (CA)
         */
-        $columnsToAppend = [0, 1, 2, 3, 4, 67, 68, 120, 121, 27, 5, 61, 94, 87, 78];
+        $columnsToAppend = [0, 1, 2, 3, 4, 67, 68, 120, 121, 27, 5, 61, 94, 96, 72];
         $sheets = [];
 
         foreach ($uploadedData as $sheetIndex => $sheet) {
