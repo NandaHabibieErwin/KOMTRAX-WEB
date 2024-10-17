@@ -24,15 +24,14 @@ export async function UploadExcelFile(file) {
 export const LoadExcelFile = async () => {
     try {
         const response = await axios.get('/get-excel');
-        if (response.data.filepath && response.data.data) {
+
             return {
                 fileUrl: response.data.filepath,
                 data: response.data.data,
                 filename: response.data.filename,
-            };
-        } else {
-            throw new Error('No File Detected');
-        }
+
+            }
+
     } catch (error) {
         console.error('Cannot load excel file', error);
         throw error;

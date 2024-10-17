@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\EnrollController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UnitTrackerController;
 use App\Http\Middleware\CheckRole;
@@ -25,8 +26,12 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/get-excel', [UnitTrackerController::class, 'ReadMainExcel'])->name('ReadMainExcel');
     Route::get('/enroll', [UnitTrackerController::class, 'index'])->name('enroll');
-    //Route::get('/delete-duplicate', [UnitTrackerController::class, 'DeleteDuplicateData'])->name('DeleteDuplicate');
+
+    // Filter Management
+    Route::post('/save-filter', [EnrollController::class, 'AddEnroll'])->name("save-filter");
+    Route::get('/read-enroll', [EnrollController::class, 'ReadEnroll'])->name('read-enroll');
 });
+
 
 //Data Management Route
 Route::middleware(['auth', 'CheckRole:admin'])->group(function () {
@@ -35,6 +40,7 @@ Route::middleware(['auth', 'CheckRole:admin'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/upload-excel', [UnitTrackerController::class, 'UploadExcelData'])->name('UploadExcel');
     Route::get('/upload', [AdminController::class, 'index'])->name('upload');
+    Route::get('/getcustomername', [AdminController::class, 'RetrieveCustomerName'])->name('GetCustomerName');
 });
 
 // User Status Check Route

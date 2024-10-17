@@ -8,6 +8,8 @@ use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Storage;
 use App\Models\ExcelModel;
+use Auth;
+use App\Models\User;
 
 use Illuminate\Http\Request;
 
@@ -17,6 +19,7 @@ class UnitTrackerController extends Controller
     public function index(Request $request)
     {
         return Inertia::render('Enroll', [
+            'user' => auth()->user(),
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
         ]);
@@ -24,7 +27,17 @@ class UnitTrackerController extends Controller
 
     public function ReadMainExcel()
     {
-        $filePath = 'excel/UnitTracker.xlsx';
+        $User = User::all()->where('status', 'user');
+        $files = [];
+        if (Auth::user()->status == 'user') {
+            $filePath = 'excel/' . Auth::user()->name . '_UnitTracker.xlsx';
+        } else {
+            foreach ($User as $Users) {
+                $filePath = 'excel/' . $Users->name . '_UnitTracker.xlsx';
+            }
+        }
+
+        $AllData = [];
 
         if (Storage::disk('public')->exists($filePath)) {
             $path = Storage::disk('public')->path($filePath);
@@ -69,6 +82,7 @@ class UnitTrackerController extends Controller
           ]);
 
           */
+
         $filePath = 'excel/UnitTracker.xlsx';
 
         if (!Storage::disk('public')->exists($filePath)) {
@@ -76,7 +90,6 @@ class UnitTrackerController extends Controller
         }
 
         $path = Storage::disk('public')->path($filePath);
-        $existingData = Excel::toArray([], $path);
 
 
         $uploadedFile = $request->file('file');
@@ -115,7 +128,6 @@ class UnitTrackerController extends Controller
                 foreach ($columnsToAppend as $colIndex) {
                     $value = isset($row[$colIndex]) ? $row[$colIndex] : null;
 
-                    // Convert Working Hour (67) and Actual Working Hour (68) to dates
                     if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $value)) {
                         $newRowData[] = \Carbon\Carbon::createFromFormat('m/d/Y', $value)->toDateString();
 
@@ -123,9 +135,19 @@ class UnitTrackerController extends Controller
                         $newRowData[] = $value;
                     }
                 }
+                $customerName = isset($row[27]) ? $row[27] : 'Unknown_Customer';
+                $filePathForCustomer = 'excel/' . $customerName . '_UnitTracker.xlsx';
+                $customerName = isset($row[27]) ? $row[27] : 'Unknown_Customer';
+                $filePathForCustomer = 'excel/' . $customerName . '_UnitTracker.xlsx';
 
-                if (isset($existingData[$currentSheetIndex])) {
-                    $sheetData = $existingData[$currentSheetIndex];
+                if (Storage::disk('public')->exists($filePathForCustomer)) {
+                    $existingDataForCustomer = Excel::toArray([], Storage::disk('public')->path($filePathForCustomer));
+                } else {
+                    $existingDataForCustomer = [];
+                }
+
+                if (isset($existingDataForCustomer[$currentSheetIndex])) {
+                    $sheetData = $existingDataForCustomer[$currentSheetIndex];
                 } else {
                     $sheetData = [];
                 }
@@ -137,18 +159,18 @@ class UnitTrackerController extends Controller
         $multiSheetExport = new RowHandlerExport($sheets);
 
 
-        Excel::store(new RowHandlerExport($sheets), $filePath, 'public');
+        Excel::store(new RowHandlerExport($sheets), $filePathForCustomer, 'public');
 
         $originalName = $uploadedFile->getClientOriginalName();
         \Log::info('Data appended from file: ' . $originalName);
 
         // Due to finnicky implementation, a new function is needed to handle duplicate data, trade off is slower upload
-        $this->DeleteDuplicateData();
+        // $this->DeleteDuplicateData();
 
         return response()->json(['message' => 'Data appended successfully.'], 200);
     }
 
-    public function DeleteDuplicateData()
+    public function ProcessData()
     {
         $filePath = 'excel/UnitTracker.xlsx';
 
@@ -158,56 +180,32 @@ class UnitTrackerController extends Controller
 
         $path = Storage::disk('public')->path($filePath);
         $existingData = Excel::toArray([], $path);
-
-
-        $filteredData = [];
+        $customerSerialSheets = [];
 
         foreach ($existingData as $sheetIndex => $sheet) {
-            $dateFroms = [];
-            $filteredSheet = [];
-
             foreach ($sheet as $rowIndex => $row) {
-                $dateFrom = isset($row[7]) ? $row[7] : null;
+                $customerName = isset($row[9]) ? $row[9] : 'Unknown_Customer';
+                $serialNumber = isset($row[4]) ? $row[4] : 'Unknown_Serial';
 
-                if ($dateFrom) {
-                    if (isset($dateFroms[$dateFrom])) {
-                        $existingRow = &$filteredSheet[$dateFroms[$dateFrom]];
+                $sheetKey = $customerName . '_' . $serialNumber;
 
-                        foreach ($row as $colIndex => $value) {
-                            if (!isset($existingRow[$colIndex]) || $existingRow[$colIndex] === null) {
-                                $existingRow[$colIndex] = $value;
-                            }
-                        }
-
-                        \Log::info("New columns added to existing DateFrom", ['dateFrom' => $dateFrom, 'rowIndex' => $rowIndex]);
-                    } else {
-
-                        $dateFroms[$dateFrom] = count($filteredSheet);
-                        $filteredSheet[] = $row;
-                    }
-                } else {
-                    $filteredSheet[] = $row;
+                if (!isset($customerSerialSheets[$sheetKey])) {
+                    $customerSerialSheets[$sheetKey] = [];
                 }
-            }
 
-            $filteredData[$sheetIndex] = new RowHandlerArray($filteredSheet);
+                $customerSerialSheets[$sheetKey][] = $row;
+            }
         }
-        $multiSheetExport = new RowHandlerExport($filteredData);
+
+        $exportSheets = [];
+        foreach ($customerSerialSheets as $sheetKey => $rows) {
+            $exportSheets[] = new RowHandlerArray($rows, $sheetKey);
+        }
+
+        $multiSheetExport = new RowHandlerExport($exportSheets);
         Excel::store($multiSheetExport, $filePath, 'public');
 
-        return response()->json(['message' => 'Duplicate rows based on DateFrom removed within each sheet successfully.'], 200);
-    }
-
-
-
-
-    public function getExcelFile($id)
-    {
-        $file = ExcelModel::findOrFail($id);
-        $fileUrl = Storage::url($file->filepath);
-
-        return response()->json(['file_path' => $fileUrl], 200);
+        return response()->json(['message' => 'Data has been moved to separate sheets based on CustomerName and SerialNumber.'], 200);
     }
 }
-
 

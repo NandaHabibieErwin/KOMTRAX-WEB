@@ -1,217 +1,273 @@
+<style lang="css" module>
+#chart {
+    max-width: 760px;
+    margin: 35px auto;
+    opacity: 0.9;
+}
+
+.arrow_box {
+    position: relative;
+    background: #555;
+    border: 2px solid #000000;
+}
+
+.arrow_box:after,
+.arrow_box:before {
+    right: 100%;
+    top: 50%;
+    border: solid transparent;
+    content: " ";
+    height: 0;
+    width: 0;
+    position: absolute;
+    pointer-events: none;
+}
+
+.arrow_box:after {
+    border-color: rgba(85, 85, 85, 0);
+    border-right-color: #555;
+    border-width: 10px;
+    margin-top: -10px;
+}
+
+.arrow_box:before {
+    border-color: rgba(0, 0, 0, 0);
+    border-right-color: #000000;
+    border-width: 13px;
+    margin-top: -13px;
+}
+
+#chart .apexcharts-tooltip {
+    color: #fff;
+    transform: translateX(10px) translateY(10px);
+    overflow: visible !important;
+    white-space: normal !important;
+}
+
+#chart .apexcharts-tooltip span {
+    padding: 5px 10px;
+    display: inline-block;
+}
+</style>
+
 <template>
-    <div>
+    <v-container>
+        <v-row>
+            <v-col cols="12">
+                <v-pagination class="pagination mb-2" v-model="page" :length="TotalPages" total-visible="7"
+                    @input="UpdatePaginatedCharts"></v-pagination>
+            </v-col>
+        </v-row>
 
-        <div v-for="(chartData, index) in limitedCharts" :key="index" class="chart-container">
-            <h3>Chart for Row {{ index + 1 }}</h3>
-            <apexchart
-                width="350px"
-                height="253px"
-                type="area"
-                :options="chartData.options"
-                :series="chartData.series"
-            ></apexchart>
-        </div>
+        <Grid :charts="PaginatedCharts"></Grid>
 
-        <button v-if="showLoadMore" @click="loadMoreCharts">Load More Charts</button>
-    </div>
+    </v-container>
 </template>
 
 <script>
 import * as XLSX from 'xlsx';
-import { UploadExcelFile, GetExcelFile, LoadExcelFile, GetAllExcelFiles } from '@/excel';
+import { UploadExcelFile, LoadExcelFile } from '@/excel';
+import Grid from '@/Components/ChartnCard/Grid.vue';
+
 export default {
+    components: {
+        Grid,
+    },
     data() {
         return {
-            charts: [], // All charts
-            visibleChartCount: 10, // Number of charts to render initially
-            loadAmount: 10, // Number of charts to load per click
+            charts: [],
+            PaginatedCharts: [],
+            page: 1,
+            itemsPerPage: 9,
         };
     },
-    computed: {
-        limitedCharts() {
-            // Return the limited number of charts based on visibleChartCount
-            return this.charts.slice(0, this.visibleChartCount);
-        },
-        showLoadMore() {
-            // Show the Load More button if there are more charts to load
-            return this.visibleChartCount < this.charts.length;
+    watch: {
+        page() {
+            this.UpdatePaginatedCharts();
         }
+    },
+    computed: {
+        TotalPages() {
+            return Math.ceil(this.charts.length / this.itemsPerPage);
+        },
     },
     mounted() {
 
-        this.fetchAllExcelFiles();
+        this.GetExcel();
     },
     methods: {
-        async handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
+        async GetExcel() {
             try {
-
-                const response = await UploadExcelFile(file);
-                const fileId = response.file_id;
-
-
-                this.fetchExcelFileData(fileId);
-            } catch (error) {
-                console.error('Error uploading file:', error);
-            }
-        },
-
-        async fetchAllExcelFiles() {
-  try {
-    const files = await GetAllExcelFiles(); // This might be a single object
-
-    // Check if we got a single file object
-    if (files && !Array.isArray(files)) {
-      // If it's not an array, process it as a single file
-      await this.processExcelFile(files.file_path, files.filename);
-    } else if (Array.isArray(files) && files.length > 0) {
-      // If it's an array, process each file
-      for (const file of files) {
-        await this.processExcelFile(file.file_path, file.filename);
-      }
-    } else {
-      console.error('No files found');
-    }
-  } catch (error) {
-    console.error('Error fetching all Excel files:', error);
-  }
-},
-
-
-
-        async fetchExcelFileData(fileId) {
-            try {
-                const response = await GetExcelFile(fileId);
-                this.fileUrl = response.file_path;
+                const response = await LoadExcelFile();
+                this.fileUrl = response.fileUrl;
                 this.filename = response.filename;
 
-
-                this.ProcessExcelFile(this.fileUrl);
-                updateChart(this, labels, values);
+                await this.processFile(this.fileUrl);
             } catch (error) {
                 console.error('Error fetching Excel file:', error);
             }
         },
-        async fetchLatestExcelFile() {
+        async processFile(fileUrl) {
             try {
-                const response = await LoadExcelFile();
-                this.fileUrl = response.fileUrl;
-                this.fileId = response.fileId;
-                this.filename = response.filename;
+                const response = await fetch(fileUrl);
+                const data = await response.arrayBuffer();
 
-                // Process the Excel file and update the chart
-                await this.processExcelFile(this.fileUrl);
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                workbook.SheetNames.forEach((sheetName, sheetIndex) => {
+                    if (sheetIndex === 0) return;
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+
+                    const header = jsonData[0];
+
+
+                    const sortedData = jsonData.slice(1).sort((a, b) => {
+                        const dateA = a[7] ? new Date(a[7]) : null;
+                        const dateB = b[7] ? new Date(b[7]) : null;
+
+                        if (dateA && dateB) {
+                            return dateA - dateB;
+                        }
+
+                        return dateA ? 1 : (dateB ? -1 : 0);
+                    });
+
+
+                    const sortedJsonData = [header, ...sortedData];
+
+
+                    //                    console.log(sortedJsonData);
+
+                    const labels = sortedJsonData.slice(1).map(row => {
+                        const dateStr = row[7] || '';
+                        const dateObj = dateStr ? new Date(dateStr) : null;
+                        if (dateObj) {
+                            return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        }
+                        return '';
+
+                    });
+                    const WorkingHour = sortedJsonData.slice(1).map(row => row[5] || 0);
+                    const ActualWorkingHour = sortedJsonData.slice(1).map(row => row[6] || 0);
+                    const CustomerMachine = sortedJsonData.slice(1).map(row => row[10] || 0).slice(-1);
+                    const Model = sortedJsonData.slice(1).map(row => row[2] || 0).slice(-1);
+                    const SerialNumber = sortedJsonData.slice(1).map(row => row[4] || 0).slice(-1);
+                    const SMR = sortedJsonData.slice(1).map(row => row[11] || 0).slice(-1);
+                    const FuelConsumption = sortedJsonData.slice(1).map(row => row[12] || 0);
+                    const AverageFuelConsumption = (FuelConsumption.reduce((a, b) => a + b, 0) / FuelConsumption.length).toFixed(2);
+                    const EModeActualWorkingHour = sortedJsonData.slice(1).map(row => row[14] || 0).filter(val => !isNaN(val)).filter(val => !isNaN(val) && val > 0);
+                    const TotalEModeActualWorkingHour = (EModeActualWorkingHour.reduce((a, b) => a + b, 0));
+                    const ActualWorkingHourToFilter = ActualWorkingHour.filter(val => !isNaN(val) && val > 0);
+                    const TotalActualWorkingHour = ActualWorkingHour.reduce((a, b) => a + b, 0);
+                    const PMode = ((TotalActualWorkingHour - TotalEModeActualWorkingHour) / TotalActualWorkingHour) * 100;
+
+                    const ChartTitle = Model+"-" + CustomerMachine + "-" + SerialNumber;
+                    const AdditionalTitle = "SMR: " + SMR + " H<br>Fuel: " + AverageFuelConsumption + " " + "L/H<br>PMode: " + PMode.toFixed(1)+"%";
+
+
+                    const UnitChart = {
+                        options: {
+                            chart: {
+                                id: `Unit-Data-${sheetIndex}`,
+                                toolbar: { show: false },
+                                animations: {
+                                    enabled: true,
+                                    easing: 'easeinout',
+                                    speed: 800,
+                                },
+                                zoom: {
+                                    enabled: true,
+                                    type: 'x',
+                                    autoScaleYaxis: true,
+                                }
+                            },
+                        /*    title: {
+                                text: ChartTitle,
+                                align: 'left',
+                                margin: 10,
+                                offsetX: 0,
+                                offsetY: 0,
+                                floating: false,
+                                style: {
+                                    fontSize: '14px',
+                                    fontWeight: 'bold',
+                                    fontFamily: undefined,
+                                    color: '#263238'
+                                },
+                            },
+                            subtitle:
+                            {
+                                text: AdditionalTitle,
+                                align: 'right',
+                                margin: 10,
+                                offsetX: 0,
+                                offsetY: 0,
+                                floating: true,
+                                style: {
+                                    fontSize: '12px',
+                                    fontWeight: 'normal',
+                                    fontFamily: undefined,
+                                    color: 'black'
+                                },
+                            }, */
+                            xaxis: {
+                                categories: labels,
+                                tickAmount: 5,
+                                hideOverlappingLabels: true,
+                            },
+                            theme: {
+                                monochrome: {
+                                    enabled: true,
+                                    color: '#FFD500',
+                                    shadeTo: 'dark',
+                                    shadeIntensity: 0.15,
+                                },
+                            },
+                            yaxis: {
+                                min: 0,
+                                max: 24,//Math.max(...WorkingHour) + 5,
+                                tickAmount: 1,
+                            },
+                            tooltip: {
+                                enabled: true,
+                                shared: true,
+                                theme: 'light',
+                                intersect: false,
+                                x: {
+                                    show: false,
+                                }
+                            },
+                            dataLabels: { enabled: false },
+
+                            stroke: { width: 3, curve: 'smooth' },
+                        },
+                        series: [
+                            {
+                                name: 'Working Hour',
+                                data: WorkingHour,
+                            },
+                            {
+                                name: 'Actual Working Hour',
+                                data: ActualWorkingHour,
+                            },
+                        ],
+                        ChartTitle: ChartTitle,
+                        AdditionalTitle: AdditionalTitle,
+                    };
+
+                    this.charts.push(UnitChart);
+                });
+                this.UpdatePaginatedCharts();
             } catch (error) {
-                console.error('Error fetching the latest Excel file:', error);
+                console.error('Error processing Excel file:', error);
             }
         },
-        async processExcelFile(fileUrl, filename) {
-    try {
-        const response = await fetch(fileUrl);
-        const data = await response.arrayBuffer();
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-        if (!jsonData || jsonData.length === 0) {
-            console.error('Invalid or empty Excel file');
-            return;
-        }
-
-        // First row is the header (x-axis labels)
-        const labels = jsonData[0];
-        const newCharts = [];
-
-        jsonData.slice(1).forEach((row, index) => {
-            const WorkingHour = row[67] !== undefined ? row[67] : 0; // Ensure valid number
-            const ActualWorkingHour = row[68] !== undefined ? row[68] : 0; // Ensure valid number
-            const date = row[0] || `Unknown Date ${index + 1}`; // Ensure a date or a fallback
-
-            if (!row || row.length === 0) {
-                console.warn(`Skipping empty row ${index + 1}`);
-                return;
-            }
-
-            // Prepare chart data
-            const chartData = {
-                filename,
-                options: {
-                    chart: {
-                        id: `vuechart-${newCharts.length}`,
-                        toolbar: { show: false },
-                        animations: {
-                            enabled: true,
-                            easing: 'easeinout',
-                            speed: 800,
-                            animateGradually: {
-                                enabled: true,
-                                delay: 150
-                            },
-                            dynamicAnimation: {
-                                enabled: true,
-                                speed: 350
-                            }
-                        },
-                    },
-                    xaxis: {
-                        categories: [date],  // X-axis displaying the date
-                        labels: {
-                            format: 'dd MMM',  // Display the date format as needed
-                        },
-                    },
-                    yaxis: {
-                        min: 0,
-                        max: 24,  // 0-24 hour interval for y-axis
-                        tickAmount: 6,  // 6 ticks (0, 4, 8, 12, 16, 20, 24)
-                        title: {
-                            text: 'Hours',
-                        }
-                    },
-                    tooltip: {
-                        enabled: true,
-                        shared: true,
-                        intersect: false,
-                        theme: 'dark',
-                    },
-                    dataLabels: { enabled: false },
-                    theme: {
-                        monochrome: {
-                            enabled: true,
-                            color: '#FFD500',
-                            shadeTo: 'dark',
-                            shadeIntensity: 0.15,
-                        },
-                    },
-                    stroke: { width: 2 },
-                },
-                series: [
-                    {
-                        name: 'Working Hour',
-                        data: [WorkingHour],  // Valid numeric data for working hours
-                    },
-                    {
-                        name: 'Actual Working Hour',
-                        data: [ActualWorkingHour],  // Valid numeric data for actual working hours
-                    }
-                ],
-            };
-
-            newCharts.push(chartData);
-        });
-
-        // Append new charts
-        this.charts.push(...newCharts);
-
-    } catch (error) {
-        console.error('Error processing Excel file:', error);
-    }
-},
-        loadMoreCharts() {
-            // Increase the visibleChartCount by loadAmount to load more charts
-            this.visibleChartCount += this.loadAmount;
+        UpdatePaginatedCharts() {
+            const start = (this.page - 1) * this.itemsPerPage;
+            const end = start + this.itemsPerPage;
+            this.PaginatedCharts = this.charts.slice(start, end);
         }
     },
 };

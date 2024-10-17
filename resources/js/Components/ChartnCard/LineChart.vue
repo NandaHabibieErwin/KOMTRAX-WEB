@@ -1,66 +1,19 @@
-<style lang="css" module>
-#chart {
-    max-width: 760px;
-    margin: 35px auto;
-    opacity: 0.9;
-}
-
-.arrow_box {
-    position: relative;
-    background: #555;
-    border: 2px solid #000000;
-}
-
-.arrow_box:after,
-.arrow_box:before {
-    right: 100%;
-    top: 50%;
-    border: solid transparent;
-    content: " ";
-    height: 0;
-    width: 0;
-    position: absolute;
-    pointer-events: none;
-}
-
-.arrow_box:after {
-    border-color: rgba(85, 85, 85, 0);
-    border-right-color: #555;
-    border-width: 10px;
-    margin-top: -10px;
-}
-
-.arrow_box:before {
-    border-color: rgba(0, 0, 0, 0);
-    border-right-color: #000000;
-    border-width: 13px;
-    margin-top: -13px;
-}
-
-#chart .apexcharts-tooltip {
-    color: #fff;
-    transform: translateX(10px) translateY(10px);
-    overflow: visible !important;
-    white-space: normal !important;
-}
-
-#chart .apexcharts-tooltip span {
-    padding: 5px 10px;
-    display: inline-block;
-}
-</style>
-
 <template>
     <v-container>
+        <v-sheet elevation="6">
+            <v-tabs bg-color="red" next-icon="mdi-arrow-right-bold-box-outline"
+                prev-icon="mdi-arrow-left-bold-box-outline" show-arrows>
+                <v-tab v-for="(filter, i) in filters" :key="i" :text="filter.nama_filter"></v-tab>
+            </v-tabs>
+        </v-sheet>
+
+        <Grid :charts="PaginatedCharts"></Grid>
         <v-row>
             <v-col cols="12">
                 <v-pagination class="pagination mb-2" v-model="page" :length="TotalPages" total-visible="7"
                     @input="UpdatePaginatedCharts"></v-pagination>
             </v-col>
         </v-row>
-
-        <Grid :charts="PaginatedCharts"></Grid>
-
     </v-container>
 </template>
 
@@ -75,6 +28,7 @@ export default {
     },
     data() {
         return {
+            filters: [],
             charts: [],
             PaginatedCharts: [],
             page: 1,
@@ -94,19 +48,32 @@ export default {
     mounted() {
 
         this.GetExcel();
+        this.GetFilter();
     },
     methods: {
-        async GetExcel() {
+        async GetFilter() {
             try {
-                const response = await LoadExcelFile();
-                this.fileUrl = response.fileUrl;
-                this.filename = response.filename;
+               const response = await axios.get('/read-enroll');
+               this.filters = response.data.filters;
+                console.log(response.data.filters);
 
-                await this.processFile(this.fileUrl);
-            } catch (error) {
-                console.error('Error fetching Excel file:', error);
             }
+            catch (error) {
+                console.error("Error:", error);
+            }
+
         },
+        async GetExcel() {
+    try {
+        const response = await LoadExcelFile();
+        this.fileUrl = response.fileUrl;  // Store fileUrl in the component's data
+        this.filename = response.filename;
+
+        await this.processFile(this.fileUrl);  // Use 'this.fileUrl' instead of 'fileUrl'
+    } catch (error) {
+        console.error("Error:", error);
+    }
+},
         async processFile(fileUrl) {
             try {
                 const response = await fetch(fileUrl);
@@ -115,7 +82,7 @@ export default {
                 const workbook = XLSX.read(data, { type: 'array' });
 
                 workbook.SheetNames.forEach((sheetName, sheetIndex) => {
-                    if (sheetIndex === 0) return;
+                    if (sheetIndex <= 1) return;
                     const worksheet = workbook.Sheets[sheetName];
                     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
