@@ -2,8 +2,8 @@
     <div class="pa-4 text-center">
         <v-dialog v-model="dialog" max-width="600">
             <template v-slot:activator="{ props: activatorProps }">
-                <v-btn class="text-none font-weight-regular" prepend-icon="mdi-account" text="Edit Profile"
-                    variant="tonal" v-bind="activatorProps"></v-btn>
+                <v-fab color="primary" icon="$vuetify" variant="tonal" v-bind="activatorProps" class="position-fixed bottom-0 right-0 mb-14 mr-20">
+                    </v-fab>
             </template>
 
             <v-card prepend-icon="mdi-account" title="User Profile">
@@ -40,7 +40,7 @@ import { Head, usePage } from '@inertiajs/vue3';
 import { reactive, ref } from 'vue';
 export default {
 
-    setup() {
+    setup(_, { emit }) {
         const { props } = usePage();
         const dialog = ref(false);
         const filter = reactive({
@@ -51,8 +51,9 @@ export default {
 
         const SaveFilter = async () => {
             try {
-                await axios.post('/save-filter', filter);
+               const response = await axios.post('/save-filter', filter);
                 dialog.value = false;
+                emit('filterSaved', response.data);
             } catch (error) {
                 console.error('Failed:', error);
             }

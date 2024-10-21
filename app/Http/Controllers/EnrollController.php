@@ -20,20 +20,49 @@ class EnrollController extends Controller
         return response()->json(['success' => true, 'enroll' => $enroll], 201);
     }
 
-    public function EditEnroll()
+    public function EditEnroll(Request $request)
     {
+        $validated = $request->validate([
+            'id' => 'required',
+            'nama_filter' => 'required|string',
+            'machine' => 'nullable|string',
+        ]);
 
+        $enroll = EnrollModel::find($validated['id']);
+        if (!$enroll) {
+            return response()->json(['success' => false, 'message' => 'Record not found'], 404);
+        }
+
+        $enroll->update([
+            'nama_filter' => $validated['nama_filter'],
+            'machine' => $validated['machine'],
+        ]);
+
+        return response()->json(['success' => true, 'enroll' => $enroll], 201);
     }
 
-    public function DeleteEnroll()
+    public function DeleteEnroll(Request $request)
     {
+        $validated = $request->validate([
+            'id' => 'required',
+        ]);
+        
+        $enroll = EnrollModel::find($validated['id']);
+        if (!$enroll) {
+            return response()->json(['success' => false, 'message' => 'Record not found'], 404);
+        }
 
+        $enroll->delete();
     }
 
     public function ReadEnroll()
     {
 
         $EnrollData = EnrollModel::where('idUser', auth()->user()->id)->get();
+        foreach($EnrollData as $data){
+        $data->machine = preg_split('/\s*,\s*/', $data->machine);
+    }
+
         return response()->json([
             'filters' => $EnrollData
         ]);

@@ -29,7 +29,9 @@ Route::middleware('auth')->group(function () {
 
     // Filter Management
     Route::post('/save-filter', [EnrollController::class, 'AddEnroll'])->name("save-filter");
+    Route::put('/update-filter', [EnrollController::class, 'EditEnroll'])->name("update-filter");
     Route::get('/read-enroll', [EnrollController::class, 'ReadEnroll'])->name('read-enroll');
+    Route::delete('/delete-filter', [EnrollController::class, 'DeleteEnroll'])->name('delete-filter');
 });
 
 
