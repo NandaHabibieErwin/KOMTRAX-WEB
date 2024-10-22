@@ -26,6 +26,7 @@ class EnrollController extends Controller
             'id' => 'required',
             'nama_filter' => 'required|string',
             'machine' => 'nullable|string',
+            'target' => 'nullable|numeric',
         ]);
 
         $enroll = EnrollModel::find($validated['id']);
@@ -36,6 +37,7 @@ class EnrollController extends Controller
         $enroll->update([
             'nama_filter' => $validated['nama_filter'],
             'machine' => $validated['machine'],
+            'target' => $validated['target'],
         ]);
 
         return response()->json(['success' => true, 'enroll' => $enroll], 201);
@@ -46,7 +48,7 @@ class EnrollController extends Controller
         $validated = $request->validate([
             'id' => 'required',
         ]);
-        
+
         $enroll = EnrollModel::find($validated['id']);
         if (!$enroll) {
             return response()->json(['success' => false, 'message' => 'Record not found'], 404);

@@ -13,9 +13,9 @@ import ManageEnrollForm from '@/Components/ManageEnrollForm.vue';
     <Head title="Enroll" />
 
     <AuthenticatedLayout>
-        <template #header>
+    <!--    <template #header>
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Enroll</h2>
-        </template>
+        </template> -->
 
         <div class="py-12">
             <div class="max-w-9xl mx-auto sm:px-4 lg:px-5">
