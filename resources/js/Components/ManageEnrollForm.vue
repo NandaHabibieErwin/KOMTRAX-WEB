@@ -2,7 +2,7 @@
     <div class="pa-4 text-center">
         <v-dialog v-model="dialog" max-width="600">
             <template v-slot:activator="{ props: activatorProps }">
-                <v-btn class="text-none font-weight-regular" prepend-icon="mdi-account" text="Edit Profile"
+                <v-btn v-if="!IsAllTab" :disabled="IsAllTab" class="text-none font-weight-regular" prepend-icon="mdi-account" text="Edit Profile"
                     variant="tonal" v-bind="activatorProps"></v-btn>
             </template>
 
@@ -48,6 +48,10 @@ export default {
             default: () => ({ nama_filter: '', machine: '' })
         },
         UpdateDisplay: Function,
+        IsAllTab: {
+            type: Boolean,
+            default:false,
+        }
     },
     setup(props) {
         const dialog = ref(false);
@@ -58,9 +62,17 @@ export default {
         });
 
         watch(() => props.SelectedFilter, (newFilter) => {
+            if(props.IsAllTab && newFilter){
             filter.id = newFilter.id || ''
             filter.nama_filter = newFilter.nama_filter || '';
             filter.machine = newFilter.machine || '';
+        }
+        else {
+            console.log("IsAllTab:"+props.IsAllTab);
+            filter.id = 9999;
+            filter.nama_filter = "null";
+            filter.machine = "null";
+        }
         });
 
         const UpdateFilter = async () => {
