@@ -14,9 +14,6 @@
                     <div v-if="averagePModeRatio !== null && averagePModeRatio !== 0">
                         <strong>P Mode Ratio:</strong> {{ averagePModeRatio }} %
                     </div>
-                    <div v-if="averageEModeRatio !== null && averageEModeRatio !== 0">
-                        <strong>E Mode Ratio:</strong> {{ averageEModeRatio }} %
-                    </div>
                 </v-card-text>
             </v-card>
         </v-col>
@@ -37,10 +34,6 @@ export default {
         averagePModeRatio: {
             type: Number,
             default: 0
-        },
-        averageEModeRatio: {
-            type: Number,
-            default: 0
         }
     },
     computed: {
@@ -49,8 +42,7 @@ export default {
             return (
                 this.averageFuelConsumption !== 0 ||
                 this.averageIdlingRatio !== 0 ||
-                this.averagePModeRatio !== 0 ||
-                this.averageEModeRatio !== 0
+                this.averagePModeRatio !== 0
             );
         },
         // Dynamically set the card title based on the available averages
@@ -65,9 +57,6 @@ export default {
             }
             if (this.averagePModeRatio !== 0) {
                 title = 'Average P Mode Ratio';
-            }
-            if (this.averageEModeRatio !== 0) {
-                title = 'Average E Mode Ratio';
             }
 
             return title;

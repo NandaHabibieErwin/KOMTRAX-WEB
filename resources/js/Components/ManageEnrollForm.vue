@@ -3,16 +3,8 @@
         <!-- Improved Dialog -->
         <v-dialog v-model="dialog" max-width="600" persistent>
             <template v-slot:activator="{ props: activatorProps }">
-                <v-btn
-                    v-if="!IsAllTab"
-                    :disabled="IsAllTab"
-                    class="text-none font-weight-regular"
-                    prepend-icon="mdi-account"
-                    variant="tonal"
-                    v-bind="activatorProps"
-                >
-                    Edit Profile
-                </v-btn>
+                <v-btn v-if="!IsAllTab" :disabled="IsAllTab" class="text-none font-weight-regular" prepend-icon="mdi-account" text="Edit Profile"
+                    variant="tonal" v-bind="activatorProps"></v-btn>
             </template>
 
             <v-card>
@@ -105,8 +97,8 @@ export default {
         UpdateDisplay: Function,
         IsAllTab: {
             type: Boolean,
-            default: false,
-        },
+            default:false,
+        }
     },
     setup(props) {
         const dialog = ref(false);
@@ -125,23 +117,19 @@ export default {
             target: '',
         });
 
-        watch(
-            () => props.SelectedFilter,
-            (newFilter) => {
-                if (!props.IsAllTab && newFilter) {
-                    filter.id = newFilter.id || '';
-                    filter.nama_filter = newFilter.nama_filter || '';
-                    filter.machine = newFilter.machine || '';
-                    filter.target = newFilter.target || '';
-                } else {
-                    filter.id = 9999;
-                    filter.nama_filter = 'null';
-                    filter.machine = 'null';
-                    filter.target = 'null';
-                }
-            },
-            { immediate: true }
-        );
+        watch(() => props.SelectedFilter, (newFilter) => {
+            if(props.IsAllTab && newFilter){
+            filter.id = newFilter.id || ''
+            filter.nama_filter = newFilter.nama_filter || '';
+            filter.machine = newFilter.machine || '';
+        }
+        else {
+            console.log("IsAllTab:"+props.IsAllTab);
+            filter.id = 9999;
+            filter.nama_filter = "null";
+            filter.machine = "null";
+        }
+        });
 
         const UpdateFilter = async () => {
             // Ensure form validation is triggered correctly

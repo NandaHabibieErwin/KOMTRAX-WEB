@@ -13,7 +13,7 @@
                     @click="handleTabChange(i)"></v-tab>
 
             </v-tabs>
-
+            <ManageEnrollForm :SelectedFilter="SelectedFilter" :UpdateDisplay="UpdateDisplay" :IsAllTab="IsAllTab"></ManageEnrollForm>
         </v-sheet>
         <v-sheet elevation="6">
             <v-tabs v-model="SelectedSeriesTab">
@@ -23,8 +23,9 @@
                 <v-tab>E Mode</v-tab>
                 <v-tab>P Mode</v-tab>
             </v-tabs>
-            <EnrollCard :averageFuelConsumption="averageFuelConsumption" :averageIdlingRatio="averageIdlingRatio"
-                :averagePModeRatio="averagePModeRatio" :averageEModeRatio="averageEModeRatio" />
+            <EnrollCard :averageFuelConsumption="averageFuelConsumption"
+                        :averageIdlingRatio="averageIdlingRatio"
+                        :averagePModeRatio="averagePModeRatio" />
         </v-sheet>
         <Grid :charts="PaginatedCharts" :SelectedSeries="SelectedSeries"></Grid>
         <v-row>
@@ -65,7 +66,6 @@ export default {
             averageFuelConsumption: null,
             averageIdlingRatio: null,
             averagePModeRatio: null,
-            averageEModeRatio: null,
         };
     },
     watch: {
@@ -310,19 +310,19 @@ export default {
                                             text: 'Idling Ratio (%)',
                                         },
                                     },
-                            annotations: {
-                                yaxis: [{
-                                    y: 50,
-                                    borderColor: '#FF0000',
-                                    label: {
-                                        borderColor: '#FF0000',
-                                        style: {
-                                            color: '#fff',
-                                            background: '#FF0000'
-                                        },
-                                    }
-                                }]
-                            },
+                                    annotations: {
+            yaxis: [{
+                y: 50,
+                borderColor: '#FF0000',
+                label: {
+                    borderColor: '#FF0000',
+                    style: {
+                        color: '#fff',
+                        background: '#FF0000'
+                    },
+                }
+            }]
+        },
                             tooltip: {
                                 enabled: true,
                                 shared: true,
@@ -386,10 +386,10 @@ export default {
         UpdatePaginatedCharts() {
 
             const filtered = this.IsAllTab
-                ? this.charts
-                : this.charts.filter(chart => {
-                    return chart.FilterSerialNumber && this.SelectedMachine.some(machine => chart.FilterSerialNumber.includes(machine));
-                });;
+            ? this.charts
+            : this.charts.filter(chart => {
+                return chart.FilterSerialNumber && this.SelectedMachine.some(machine => chart.FilterSerialNumber.includes(machine));
+            });                    ;
 
             this.filteredCharts = filtered;
 
@@ -404,7 +404,6 @@ export default {
             let validFuelConsumption = [];
             let validIdlingRatio = [];
             let validPModeRatio = [];
-            let validEModeRatio = [];
 
             // Loop through the filtered charts and collect values
             charts.forEach(chart => {
@@ -416,17 +415,13 @@ export default {
                         if (series.name === 'Idling Ratio') {
                             validIdlingRatio.push(...series.data.filter(val => !isNaN(val) && val > 0));
                         }
-                        if (series.name === 'EMode') {
-                            validEModeRatio.push(...series.data.filter(val => !isNaN(val) && val > 0));
-                        }
                         if (series.name === 'PMode') {
                             validPModeRatio.push(...series.data.filter(val => !isNaN(val) && val > 0));
                         }
-
                     });
                 }
             });
-            console.log(validEModeRatio);
+
             // Calculate and set averages
             this.averageFuelConsumption = validFuelConsumption.length > 0
                 ? (validFuelConsumption.reduce((a, b) => a + b, 0) / validFuelConsumption.length).toFixed(2)
@@ -437,14 +432,10 @@ export default {
                 : 0;
 
             this.averagePModeRatio = validPModeRatio.length > 0
-                ? (validPModeRatio.reduce((a, b) => a + b, 0) / validPModeRatio.length).toFixed(2) || 0
+                ? (validPModeRatio.reduce((a, b) => a + b, 0) / validPModeRatio.length).toFixed(2)
                 : 0;
 
-            this.averageEModeRatio = validEModeRatio.length > 0
-                ? (validEModeRatio.reduce((a, b) => a + b, 0) / validEModeRatio.length).toFixed(2) || 0
-                : 0;
-
-            console.log("Averages - Fuel Consumption:", this.averageFuelConsumption, "Idling Ratio:", this.averageIdlingRatio, "PMode Ratio:", this.averagePModeRatio, "EMode Ratio:", this.averageEModeRatio);
+            console.log("Averages - Fuel Consumption:", this.averageFuelConsumption, "Idling Ratio:", this.averageIdlingRatio, "PMode Ratio:", this.averagePModeRatio);
         }
 
     },
