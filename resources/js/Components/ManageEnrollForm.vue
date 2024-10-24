@@ -1,20 +1,19 @@
 <template>
     <div class="pa-4 text-center">
-        <!-- Improved Dialog -->
-        <v-dialog v-model="dialog" max-width="600" persistent>
+        <v-dialog v-model="dialog" max-width="600">
             <template v-slot:activator="{ props: activatorProps }">
-                <v-btn v-if="!IsAllTab" :disabled="IsAllTab" class="text-none font-weight-regular" prepend-icon="mdi-account" text="Edit Profile"
-                    variant="tonal" v-bind="activatorProps"></v-btn>
+                <v-btn v-if="!IsAllTab" :disabled="IsAllTab" class="text-none font-weight-regular"
+                    prepend-icon="mdi-account" text="Edit Profile" variant="tonal" v-bind="activatorProps"></v-btn>
             </template>
 
             <v-card>
                 <v-card-title>
                     <v-icon left>mdi-account</v-icon>
-                    User Profile
+                    Enroll
                 </v-card-title>
 
                 <v-card-text>
-                    <!-- Add ref to v-form -->
+
                     <v-form ref="formRef" v-model="valid">
                         <v-row dense>
                             <v-col cols="12" md="4" sm="6">
@@ -22,22 +21,14 @@
                             </v-col>
 
                             <v-col cols="12" md="4" sm="6">
-                                <v-text-field
-                                    v-model="filter.nama_filter"
-                                    label="Nama Filter*"
-                                    :rules="[v => !!v || 'Nama Filter is required']"
-                                    required
-                                ></v-text-field>
+                                <v-text-field v-model="filter.nama_filter" label="Nama Filter*"
+                                    :rules="[v => !!v || 'Nama Filter is required']" required></v-text-field>
                             </v-col>
 
                             <v-col cols="12" md="4" sm="6">
-                                <v-text-field
-                                    hint="1,2,3"
-                                    v-model="filter.machine"
-                                    label="Mesin"
+                                <v-text-field hint="1,2,3" v-model="filter.machine" label="Mesin"
                                     placeholder="Enter machine IDs"
-                                    :rules="[v => !!v || 'Mesin is required']"
-                                ></v-text-field>
+                                    :rules="[v => !!v || 'Mesin is required']"></v-text-field>
                             </v-col>
                         </v-row>
 
@@ -63,7 +54,7 @@
             </v-card>
         </v-dialog>
 
-        <!-- Confirmation Dialog for Deletion -->
+
         <v-dialog v-model="confirmDialog" max-width="400">
             <v-card>
                 <v-card-title class="headline">Confirm Delete</v-card-title>
@@ -82,8 +73,6 @@
     </div>
 </template>
 
-### Updated Script:
-```javascript
 <script>
 import axios from 'axios';
 import { reactive, ref, watch } from 'vue';
@@ -97,7 +86,7 @@ export default {
         UpdateDisplay: Function,
         IsAllTab: {
             type: Boolean,
-            default:false,
+            default: false,
         }
     },
     setup(props) {
@@ -106,8 +95,6 @@ export default {
         const isSaving = ref(false);
         const isDeleting = ref(false);
         const valid = ref(false);
-
-        // Reference to the v-form
         const formRef = ref(null);
 
         const filter = reactive({
@@ -118,21 +105,20 @@ export default {
         });
 
         watch(() => props.SelectedFilter, (newFilter) => {
-            if(props.IsAllTab && newFilter){
-            filter.id = newFilter.id || ''
-            filter.nama_filter = newFilter.nama_filter || '';
-            filter.machine = newFilter.machine || '';
-        }
-        else {
-            console.log("IsAllTab:"+props.IsAllTab);
-            filter.id = 9999;
-            filter.nama_filter = "null";
-            filter.machine = "null";
-        }
+            if (newFilter) {
+                filter.id = newFilter.id || ''
+                filter.nama_filter = newFilter.nama_filter || '';
+                filter.machine = newFilter.machine || '';
+            }
+            else {
+                console.log("IsAllTab:" + props.IsAllTab);
+                filter.id = 9999;
+                filter.nama_filter = "null";
+                filter.machine = "null";
+            }
         });
 
         const UpdateFilter = async () => {
-            // Ensure form validation is triggered correctly
             if (!formRef.value.validate()) return;
 
             isSaving.value = true;
@@ -179,7 +165,7 @@ export default {
             confirmDialog,
             filter,
             valid,
-            formRef, // Return the formRef
+            formRef,
             UpdateFilter,
             confirmDelete,
             DeleteFilter,

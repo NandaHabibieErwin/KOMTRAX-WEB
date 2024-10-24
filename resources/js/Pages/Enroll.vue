@@ -3,11 +3,9 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import UnitChart from '@/Components/ChartnCard/LineChart.vue';
 import EnrollForm from '@/Components/EnrollForm.vue';
-import ManageEnrollForm from '@/Components/ManageEnrollForm.vue';
 
 
 </script>
-
 <template>
 
     <Head title="Enroll" />
@@ -17,11 +15,11 @@ import ManageEnrollForm from '@/Components/ManageEnrollForm.vue';
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Enroll</h2>
         </template> -->
 
-        <div class="py-12">
-            <div class="max-w-9xl mx-auto sm:px-4 lg:px-5">
+        <div>
+            <div class="max-w-9xl mx-1 sm:px-4 lg:px-5">
                 <div class="bg-gray-100 overflow-hidden shadow-sm sm:rounded-lg">
                     <EnrollForm @filterSaved="addFilterToTabs"/>
-                    <UnitChart></UnitChart>
+                    <UnitChart class="mx-0 px-0 w-max"></UnitChart>
                 </div>
             </div>
         </div>

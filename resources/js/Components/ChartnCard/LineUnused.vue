@@ -1,66 +1,40 @@
-<style lang="css" module>
-#chart {
-    max-width: 760px;
-    margin: 35px auto;
-    opacity: 0.9;
-}
-
-.arrow_box {
-    position: relative;
-    background: #555;
-    border: 2px solid #000000;
-}
-
-.arrow_box:after,
-.arrow_box:before {
-    right: 100%;
-    top: 50%;
-    border: solid transparent;
-    content: " ";
-    height: 0;
-    width: 0;
-    position: absolute;
-    pointer-events: none;
-}
-
-.arrow_box:after {
-    border-color: rgba(85, 85, 85, 0);
-    border-right-color: #555;
-    border-width: 10px;
-    margin-top: -10px;
-}
-
-.arrow_box:before {
-    border-color: rgba(0, 0, 0, 0);
-    border-right-color: #000000;
-    border-width: 13px;
-    margin-top: -13px;
-}
-
-#chart .apexcharts-tooltip {
-    color: #fff;
-    transform: translateX(10px) translateY(10px);
-    overflow: visible !important;
-    white-space: normal !important;
-}
-
-#chart .apexcharts-tooltip span {
-    padding: 5px 10px;
-    display: inline-block;
-}
-</style>
-
 <template>
-    <v-container>
-        <v-row>
+    <v-container @tab-status-changed="UpdateTabStatus">
+
+        <v-sheet elevation="4">
+            <ManageEnrollForm :SelectedFilter="SelectedFilter" :UpdateDisplay="UpdateDisplay" :IsAllTab="IsAllTab">
+            </ManageEnrollForm>
+        </v-sheet>
+        <v-sheet elevation="6">
+            <v-tabs bg-color="red" next-icon="mdi-arrow-right-bold-box-outline"
+                prev-icon="mdi-arrow-left-bold-box-outline" show-arrows>
+                <v-tab key="all" @click="handleTabChange('all')">All</v-tab>
+                <v-tab v-for="(filter, i) in filters" :key="i" :text="filter.nama_filter"
+                    @click="handleTabChange(i)"></v-tab>
+
+            </v-tabs>
+            <ManageEnrollForm :SelectedFilter="SelectedFilter" :UpdateDisplay="UpdateDisplay" :IsAllTab="IsAllTab">
+            </ManageEnrollForm>
+        </v-sheet>
+        <v-sheet elevation="6">
+            <v-tabs v-model="SelectedSeriesTab">
+                <v-tab>Working Hours</v-tab>
+                <v-tab>Fuel Consumption</v-tab>
+                <v-tab>Idling Ratio</v-tab>
+                <v-tab>E Mode</v-tab>
+                <v-tab>P Mode</v-tab>
+            </v-tabs>
+            <v-progress-circular v-if="Loading" indeterminate color="primary" class="my-3"></v-progress-circular>
+            <EnrollCard v-if="!Loading" :averageFuelConsumption="averageFuelConsumption"
+                :averageIdlingRatio="averageIdlingRatio" :averagePModeRatio="averagePModeRatio" />
+        </v-sheet>
+        <Grid v-if="!Loading" :charts="PaginatedCharts" :SelectedSeries="SelectedSeries"></Grid>
+        <v-row v-if="!Loading">
             <v-col cols="12">
                 <v-pagination class="pagination mb-2" v-model="page" :length="TotalPages" total-visible="7"
                     @input="UpdatePaginatedCharts"></v-pagination>
             </v-col>
         </v-row>
-
-        <Grid :charts="PaginatedCharts"></Grid>
-
     </v-container>
 </template>
 
@@ -68,22 +42,40 @@
 import * as XLSX from 'xlsx';
 import { UploadExcelFile, LoadExcelFile } from '@/excel';
 import Grid from '@/Components/ChartnCard/Grid.vue';
+import ManageEnrollForm from '@/Components/ManageEnrollForm.vue';
+import EnrollCard from './EnrollCard.vue';
 
 export default {
     components: {
         Grid,
+        ManageEnrollForm,
+        EnrollCard
     },
     data() {
         return {
+            filters: [],
+            SelectedFilter: null,
             charts: [],
             PaginatedCharts: [],
             page: 1,
             itemsPerPage: 9,
+            SelectedMachine: [],
+            SelectedTab: 0,
+            IsAllTab: false,
+            SelectedSeriesTab: 0,
+            SelectedSeries: 'Working Hour',
+            averageFuelConsumption: null,
+            averageIdlingRatio: null,
+            averagePModeRatio: null,
+            Loading: false,
         };
     },
     watch: {
         page() {
             this.UpdatePaginatedCharts();
+        },
+        SelectedSeriesTab(newTab) {
+            this.updateSeries(newTab);
         }
     },
     computed: {
@@ -94,9 +86,79 @@ export default {
     mounted() {
 
         this.GetExcel();
+        this.GetFilter();
+        this.handleTabChange('all');
     },
     methods: {
+        addFilterToTabs(newFilter) {
+            this.filters.push(newFilter);
+            this.SelectedFilter = newFilter;
+            this.SetMachineFilter(newFilter.machine);
+        },
+        SetMachineFilter(machine) {
+            if (machine === 'all') {
+                this.SelectedMachine = [];
+
+            }
+            else if (typeof machine === 'string') {
+                this.SelectedMachine = machine.split(',').map(m => m.trim());
+            } else if (Array.isArray(machine)) {
+                this.SelectedMachine = machine;
+            } else {
+                this.SelectedMachine = [];
+            }
+            this.UpdatePaginatedCharts();
+        },
+        async GetFilter() {
+            try {
+                const response = await axios.get('/read-enroll');
+                this.filters = response.data.filters;
+                if (this.filters.length > 0) {
+
+                    // this.SetMachineFilter(all);
+                }
+
+            }
+            catch (error) {
+                console.error("Error:", error);
+            }
+
+        },
+        handleTabChange(tabIndex) {
+            this.Loading = true;
+            if (tabIndex === 'all') {
+                this.SetMachineFilter('all');
+                this.SelectedFilter = null;
+                this.IsAllTab = true;
+                this.page = 1;
+            } else {
+                const filter = this.filters[tabIndex];
+                this.SetMachineFilter(filter.machine);
+                this.IsAllTab = false;
+                this.SelectedFilter = filter;
+                this.page = 1;
+            }
+            this.UpdatePaginatedCharts()
+            this.Loading = false;
+
+        },
+        UpdateDisplay(updatedFilter, deletedId = null) {
+            if (deletedId) {
+                this.filters = this.filters.filter(f => f.id !== deletedId);
+            } else if (updatedFilter) {
+
+                const index = this.filters.findIndex(f => f.id === updatedFilter.id);
+                if (index > -1) {
+                    this.filters.splice(index, 1, updatedFilter);
+                } else {
+                    this.filters.push(updatedFilter);
+                }
+                this.filters = [...this.filters];
+
+            }
+        },
         async GetExcel() {
+            this.Loading = true;
             try {
                 const response = await LoadExcelFile();
                 this.fileUrl = response.fileUrl;
@@ -104,8 +166,11 @@ export default {
 
                 await this.processFile(this.fileUrl);
             } catch (error) {
-                console.error('Error fetching Excel file:', error);
+                console.error("Error:", error);
+            } finally {
+                this.Loading = false;
             }
+
         },
         async processFile(fileUrl) {
             try {
@@ -115,7 +180,7 @@ export default {
                 const workbook = XLSX.read(data, { type: 'array' });
 
                 workbook.SheetNames.forEach((sheetName, sheetIndex) => {
-                    if (sheetIndex === 0) return;
+                    if (sheetIndex <= 1) return;
                     const worksheet = workbook.Sheets[sheetName];
                     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
@@ -154,17 +219,49 @@ export default {
                     const CustomerMachine = sortedJsonData.slice(1).map(row => row[10] || 0).slice(-1);
                     const Model = sortedJsonData.slice(1).map(row => row[2] || 0).slice(-1);
                     const SerialNumber = sortedJsonData.slice(1).map(row => row[4] || 0).slice(-1);
+                    const FilterSerialNumber = sortedJsonData[1][4] || '';
                     const SMR = sortedJsonData.slice(1).map(row => row[11] || 0).slice(-1);
                     const FuelConsumption = sortedJsonData.slice(1).map(row => row[12] || 0);
+                    const IdlingHour = sortedJsonData.slice(1).map(row => row[13] || 0);
                     const AverageFuelConsumption = (FuelConsumption.reduce((a, b) => a + b, 0) / FuelConsumption.length).toFixed(2);
                     const EModeActualWorkingHour = sortedJsonData.slice(1).map(row => row[14] || 0).filter(val => !isNaN(val)).filter(val => !isNaN(val) && val > 0);
                     const TotalEModeActualWorkingHour = (EModeActualWorkingHour.reduce((a, b) => a + b, 0));
                     const ActualWorkingHourToFilter = ActualWorkingHour.filter(val => !isNaN(val) && val > 0);
                     const TotalActualWorkingHour = ActualWorkingHour.reduce((a, b) => a + b, 0);
                     const PMode = ((TotalActualWorkingHour - TotalEModeActualWorkingHour) / TotalActualWorkingHour) * 100;
+                    const EMode = sortedJsonData.slice(1).map(row => {
+                        const rowWorkingHour = row[5] || 0;
+                        const rowActualWorkingHour = row[6] || 0;
+                        const rowEModeActualWorkingHour = row[14] || 0;
+                        if (!isNaN(rowEModeActualWorkingHour) && rowEModeActualWorkingHour > 0) {
+                            if (rowWorkingHour === 0 || rowActualWorkingHour === 0) return 0
+                            else return ((rowEModeActualWorkingHour / rowActualWorkingHour) * 100).toFixed(2)
+                        }
+                        else return 0;
+                    });
+                    const PModeChart = sortedJsonData.slice(1).map(row => {
+                        const rowWorkingHour = row[5] || 0;
+                        const rowActualWorkingHour = row[6] || 0;
+                        const rowEModeActualWorkingHour = row[14] || 0;
 
-                    const ChartTitle = Model+"-" + CustomerMachine + "-" + SerialNumber;
-                    const AdditionalTitle = "SMR: " + SMR + " H<br>Fuel: " + AverageFuelConsumption + " " + "L/H<br>PMode: " + PMode.toFixed(1)+"%";
+                        if (!isNaN(rowEModeActualWorkingHour) && rowEModeActualWorkingHour > 0) {
+                            if (rowWorkingHour === 0 || rowActualWorkingHour === 0) return 100;
+                            else {
+                                const EModePercentage = (rowEModeActualWorkingHour / rowActualWorkingHour) * 100;
+                                const PModePercentage = (100 - EModePercentage);
+                                return PModePercentage.toFixed(2);
+                            }
+                        } else {
+                            return 100;
+                        }
+                    });
+
+                    const sumWorkingHour = WorkingHour.reduce((a, b) => a + b, 0);
+                    const sumActualWorkingHour = ActualWorkingHour.reduce((a, b) => a + b, 0);
+
+                    const JobEfficiency = ((1 - (((sumWorkingHour) - (sumActualWorkingHour)) / (sumWorkingHour))) * 100).toFixed(2);
+                    const ChartTitle = Model + "-" + CustomerMachine + "-" + SerialNumber;
+                    const AdditionalTitle = "SMR: " + SMR + " H<br>Fuel: " + AverageFuelConsumption + " " + "L/H<br>PMode: " + PMode.toFixed(1) + "%<br>Job Efficiency: " + JobEfficiency + "%";
 
 
                     const UnitChart = {
@@ -181,37 +278,9 @@ export default {
                                     enabled: true,
                                     type: 'x',
                                     autoScaleYaxis: true,
-                                }
-                            },
-                        /*    title: {
-                                text: ChartTitle,
-                                align: 'left',
-                                margin: 10,
-                                offsetX: 0,
-                                offsetY: 0,
-                                floating: false,
-                                style: {
-                                    fontSize: '14px',
-                                    fontWeight: 'bold',
-                                    fontFamily: undefined,
-                                    color: '#263238'
                                 },
+                                type: ['EMode', 'PMode'].includes(this.SelectedSeries) ? 'bar' : 'area',
                             },
-                            subtitle:
-                            {
-                                text: AdditionalTitle,
-                                align: 'right',
-                                margin: 10,
-                                offsetX: 0,
-                                offsetY: 0,
-                                floating: true,
-                                style: {
-                                    fontSize: '12px',
-                                    fontWeight: 'normal',
-                                    fontFamily: undefined,
-                                    color: 'black'
-                                },
-                            }, */
                             xaxis: {
                                 categories: labels,
                                 tickAmount: 5,
@@ -225,10 +294,43 @@ export default {
                                     shadeIntensity: 0.15,
                                 },
                             },
-                            yaxis: {
-                                min: 0,
-                                max: 24,//Math.max(...WorkingHour) + 5,
-                                tickAmount: 1,
+                            yaxis: this.SelectedSeries === 'Working Hour'
+                                ? {
+                                    min: 0,
+                                    max: 24,
+                                    tickAmount: 1,
+                                    title: {
+                                        text: 'Hours',
+                                    },
+                                }
+                                : this.SelectedSeries === 'Fuel Consumption'
+                                    ? {
+                                        min: 0,
+                                        tickAmount: 10,
+                                        title: {
+                                            text: 'Fuel Consumption (L/H)',
+                                        },
+                                    }
+                                    : {
+                                        min: 0,
+                                        max: 100,
+                                        tickAmount: 1,
+                                        title: {
+                                            text: 'Idling Ratio (%)',
+                                        },
+                                    },
+                            annotations: {
+                                yaxis: [{
+                                    y: 50,
+                                    borderColor: '#FF0000',
+                                    label: {
+                                        borderColor: '#FF0000',
+                                        style: {
+                                            color: '#fff',
+                                            background: '#FF0000'
+                                        },
+                                    }
+                                }]
                             },
                             tooltip: {
                                 enabled: true,
@@ -243,18 +345,31 @@ export default {
 
                             stroke: { width: 3, curve: 'smooth' },
                         },
-                        series: [
-                            {
-                                name: 'Working Hour',
-                                data: WorkingHour,
-                            },
-                            {
-                                name: 'Actual Working Hour',
-                                data: ActualWorkingHour,
-                            },
-                        ],
+                        series: this.SelectedSeries === 'Working Hour'
+                            ? [
+                                { name: 'Working Hour', data: WorkingHour },
+                                { name: 'Actual Working Hour', data: ActualWorkingHour }
+                            ]
+                            : this.SelectedSeries === 'Fuel Consumption'
+                                ? [
+                                    { name: 'Fuel Consumption', data: FuelConsumption }
+                                ]
+                                : this.SelectedSeries === 'Idling Ratio'
+                                    ? [
+                                        { name: 'Idling Ratio', data: IdlingHour }
+                                    ]
+                                    : this.SelectedSeries === 'EMode'
+                                        ? [
+                                            { name: 'EMode', data: EMode }
+                                        ]
+                                        : this.SelectedSeries === 'PMode'
+                                            ? [
+                                                { name: 'PMode', data: PModeChart }
+                                            ]
+                                            : [],
                         ChartTitle: ChartTitle,
                         AdditionalTitle: AdditionalTitle,
+                        FilterSerialNumber: FilterSerialNumber,
                     };
 
                     this.charts.push(UnitChart);
@@ -264,11 +379,78 @@ export default {
                 console.error('Error processing Excel file:', error);
             }
         },
+        updateSeries(newTab) {
+            this.Loading = true;
+            if (newTab === 0) {
+                this.SelectedSeries = 'Working Hour';
+            } else if (newTab === 1) {
+                this.SelectedSeries = 'Fuel Consumption';
+            } else if (newTab === 2) {
+                this.SelectedSeries = 'Idling Ratio';
+            } else if (newTab === 3) { this.SelectedSeries = 'EMode'; }
+            else if (newTab === 4) { this.SelectedSeries = 'PMode'; }
+            console.log(this.SelectedSeries);
+            this.charts = [];
+            this.processFile(this.fileUrl).finally(() => {
+                this.Loading = false;
+            });
+        },
         UpdatePaginatedCharts() {
+            this.Loading = true;
+            const filtered = this.IsAllTab
+                ? this.charts
+                : this.charts.filter(chart => {
+                    return chart.FilterSerialNumber && this.SelectedMachine.some(machine => chart.FilterSerialNumber.includes(machine));
+                });;
+
+            this.filteredCharts = filtered;
+
             const start = (this.page - 1) * this.itemsPerPage;
             const end = start + this.itemsPerPage;
-            this.PaginatedCharts = this.charts.slice(start, end);
+
+            this.PaginatedCharts = this.filteredCharts.slice(start, end);
+
+            this.GetAverage(filtered);
+            this.Loading = false;
+        },
+        GetAverage(charts) {
+            let validFuelConsumption = [];
+            let validIdlingRatio = [];
+            let validPModeRatio = [];
+
+            // Loop through the filtered charts and collect values
+            charts.forEach(chart => {
+                if (chart.series && chart.series.length > 0) {
+                    chart.series.forEach(series => {
+                        if (series.name === 'Fuel Consumption') {
+                            validFuelConsumption.push(...series.data.filter(val => !isNaN(val) && val > 0));
+                        }
+                        if (series.name === 'Idling Ratio') {
+                            validIdlingRatio.push(...series.data.filter(val => !isNaN(val) && val > 0));
+                        }
+                        if (series.name === 'PMode') {
+                            validPModeRatio.push(...series.data.filter(val => !isNaN(val) && val > 0));
+                        }
+                    });
+                }
+            });
+
+            // Calculate and set averages
+            this.averageFuelConsumption = validFuelConsumption.length > 0
+                ? (validFuelConsumption.reduce((a, b) => a + b, 0) / validFuelConsumption.length).toFixed(2)
+                : 0;
+
+            this.averageIdlingRatio = validIdlingRatio.length > 0
+                ? (validIdlingRatio.reduce((a, b) => a + b, 0) / validIdlingRatio.length).toFixed(2)
+                : 0;
+
+            this.averagePModeRatio = validPModeRatio.length > 0
+                ? (validPModeRatio.reduce((a, b) => a + b, 0) / validPModeRatio.length).toFixed(2)
+                : 0;
+
+            console.log("Averages - Fuel Consumption:", this.averageFuelConsumption, "Idling Ratio:", this.averageIdlingRatio, "PMode Ratio:", this.averagePModeRatio);
         }
+
     },
 };
 </script>

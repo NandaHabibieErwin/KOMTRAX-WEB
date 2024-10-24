@@ -1,7 +1,6 @@
 <template>
     <v-row class="pb-5 mb-2 px-3">
         <v-col cols="12">
-            <!-- Single Card for Dynamic Title and Content -->
             <v-card v-if="hasAverages">
                 <v-card-title>{{ cardTitle }}</v-card-title>
                 <v-card-text>
@@ -37,7 +36,6 @@ export default {
         }
     },
     computed: {
-        // Check if any average value is present
         hasAverages() {
             return (
                 this.averageFuelConsumption !== 0 ||
@@ -45,9 +43,9 @@ export default {
                 this.averagePModeRatio !== 0
             );
         },
-        // Dynamically set the card title based on the available averages
+
         cardTitle() {
-            let title = 'Machine Averages'; // Default title
+            let title = 'Machine Averages';
 
             if (this.averageFuelConsumption !== 0) {
                 title = 'Average Fuel Consumption';

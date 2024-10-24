@@ -10,7 +10,7 @@ import VueApexCharts from "vue3-apexcharts";
 import axios from 'axios';
 axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'KOMWEB';
 
 
 
@@ -23,7 +23,8 @@ createInertiaApp({
             .use(vuetify)
             .use(VueApexCharts)
             .use(ZiggyVue)
-            .mount(el);
+            .mount(el)
+            ;
     },
     progress: {
         color: '#4B5563',

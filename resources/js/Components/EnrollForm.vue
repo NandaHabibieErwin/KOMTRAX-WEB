@@ -2,7 +2,7 @@
     <div class="pa-4 text-center">
         <v-dialog v-model="dialog" max-width="600">
             <template v-slot:activator="{ props: activatorProps }">
-                <v-fab color="primary" icon="$vuetify" variant="tonal" v-bind="activatorProps" class="position-fixed bottom-0 right-0 mb-14 mr-20">
+                <v-fab color="warning" variant="flat" v-bind="activatorProps" class="position-fixed bottom-0 right-0 mb-14 mr-20">
                     </v-fab>
             </template>
 

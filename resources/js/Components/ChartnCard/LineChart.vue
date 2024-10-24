@@ -1,34 +1,34 @@
 <template>
     <v-container @tab-status-changed="UpdateTabStatus">
+        <div class="w-full m-0 p-0" style="width: 100vw; margin-top:0; padding-top:0;">
+            <v-sheet elevation="4">
+            </v-sheet>
+            <v-sheet elevation="6">
+                <v-tabs bg-color="red" next-icon="mdi-arrow-right-bold-box-outline"
+                    prev-icon="mdi-arrow-left-bold-box-outline" show-arrows>
+                    <v-tab key="all" @click="handleTabChange('all')">All</v-tab>
+                    <v-tab v-for="(filter, i) in filters" :key="i" :text="filter.nama_filter"
+                        @click="handleTabChange(i)"></v-tab>
 
-        <v-sheet elevation="4">
-            <ManageEnrollForm :SelectedFilter="SelectedFilter" :UpdateDisplay="UpdateDisplay" :IsAllTab="IsAllTab">
-            </ManageEnrollForm>
-        </v-sheet>
-        <v-sheet elevation="6">
-            <v-tabs bg-color="red" next-icon="mdi-arrow-right-bold-box-outline"
-                prev-icon="mdi-arrow-left-bold-box-outline" show-arrows>
-                <v-tab key="all" @click="handleTabChange('all')">All</v-tab>
-                <v-tab v-for="(filter, i) in filters" :key="i" :text="filter.nama_filter"
-                    @click="handleTabChange(i)"></v-tab>
-
-            </v-tabs>
-            <ManageEnrollForm :SelectedFilter="SelectedFilter" :UpdateDisplay="UpdateDisplay" :IsAllTab="IsAllTab"></ManageEnrollForm>
-        </v-sheet>
-        <v-sheet elevation="6">
-            <v-tabs v-model="SelectedSeriesTab">
-                <v-tab>Working Hours</v-tab>
-                <v-tab>Fuel Consumption</v-tab>
-                <v-tab>Idling Ratio</v-tab>
-                <v-tab>E Mode</v-tab>
-                <v-tab>P Mode</v-tab>
-            </v-tabs>
-            <EnrollCard :averageFuelConsumption="averageFuelConsumption"
-                        :averageIdlingRatio="averageIdlingRatio"
-                        :averagePModeRatio="averagePModeRatio" />
-        </v-sheet>
-        <Grid :charts="PaginatedCharts" :SelectedSeries="SelectedSeries"></Grid>
-        <v-row>
+                </v-tabs>
+                <ManageEnrollForm :SelectedFilter="SelectedFilter" :UpdateDisplay="UpdateDisplay" :IsAllTab="IsAllTab">
+                </ManageEnrollForm>
+            </v-sheet>
+            <v-sheet elevation="6">
+                <v-tabs v-model="SelectedSeriesTab">
+                    <v-tab>Working Hours</v-tab>
+                    <v-tab>Fuel Consumption</v-tab>
+                    <v-tab>Idling Ratio</v-tab>
+                    <v-tab>E Mode</v-tab>
+                    <v-tab>P Mode</v-tab>
+                </v-tabs>
+                <v-progress-circular v-if="Loading" indeterminate color="primary" class="my-3"></v-progress-circular>
+                <EnrollCard v-if="!Loading" :averageFuelConsumption="averageFuelConsumption"
+                    :averageIdlingRatio="averageIdlingRatio" :averagePModeRatio="averagePModeRatio" />
+            </v-sheet>
+        </div>
+        <Grid v-if="!Loading" :charts="PaginatedCharts" :SelectedSeries="SelectedSeries"></Grid>
+        <v-row v-if="!Loading">
             <v-col cols="12">
                 <v-pagination class="pagination mb-2" v-model="page" :length="TotalPages" total-visible="7"
                     @input="UpdatePaginatedCharts"></v-pagination>
@@ -66,6 +66,7 @@ export default {
             averageFuelConsumption: null,
             averageIdlingRatio: null,
             averagePModeRatio: null,
+            Loading: false,
         };
     },
     watch: {
@@ -123,6 +124,7 @@ export default {
 
         },
         handleTabChange(tabIndex) {
+            this.Loading = true;
             if (tabIndex === 'all') {
                 this.SetMachineFilter('all');
                 this.SelectedFilter = null;
@@ -135,7 +137,9 @@ export default {
                 this.SelectedFilter = filter;
                 this.page = 1;
             }
-            this.UpdatePaginatedCharts();
+            this.UpdatePaginatedCharts()
+            this.Loading = false;
+
         },
         UpdateDisplay(updatedFilter, deletedId = null) {
             if (deletedId) {
@@ -153,6 +157,7 @@ export default {
             }
         },
         async GetExcel() {
+            this.Loading = true;
             try {
                 const response = await LoadExcelFile();
                 this.fileUrl = response.fileUrl;
@@ -161,7 +166,10 @@ export default {
                 await this.processFile(this.fileUrl);
             } catch (error) {
                 console.error("Error:", error);
+            } finally {
+                this.Loading = false;
             }
+
         },
         async processFile(fileUrl) {
             try {
@@ -310,19 +318,19 @@ export default {
                                             text: 'Idling Ratio (%)',
                                         },
                                     },
-                                    annotations: {
-            yaxis: [{
-                y: 50,
-                borderColor: '#FF0000',
-                label: {
-                    borderColor: '#FF0000',
-                    style: {
-                        color: '#fff',
-                        background: '#FF0000'
-                    },
-                }
-            }]
-        },
+                            annotations: {
+                                yaxis: [{
+                                    y: 50,
+                                    borderColor: '#FF0000',
+                                    label: {
+                                        borderColor: '#FF0000',
+                                        style: {
+                                            color: '#fff',
+                                            background: '#FF0000'
+                                        },
+                                    }
+                                }]
+                            },
                             tooltip: {
                                 enabled: true,
                                 shared: true,
@@ -371,6 +379,7 @@ export default {
             }
         },
         updateSeries(newTab) {
+            this.Loading = true;
             if (newTab === 0) {
                 this.SelectedSeries = 'Working Hour';
             } else if (newTab === 1) {
@@ -381,15 +390,17 @@ export default {
             else if (newTab === 4) { this.SelectedSeries = 'PMode'; }
             console.log(this.SelectedSeries);
             this.charts = [];
-            this.processFile(this.fileUrl);
+            this.processFile(this.fileUrl).finally(() => {
+                this.Loading = false;
+            });
         },
         UpdatePaginatedCharts() {
-
+            this.Loading = true;
             const filtered = this.IsAllTab
-            ? this.charts
-            : this.charts.filter(chart => {
-                return chart.FilterSerialNumber && this.SelectedMachine.some(machine => chart.FilterSerialNumber.includes(machine));
-            });                    ;
+                ? this.charts
+                : this.charts.filter(chart => {
+                    return chart.FilterSerialNumber && this.SelectedMachine.some(machine => chart.FilterSerialNumber.includes(machine));
+                });;
 
             this.filteredCharts = filtered;
 
@@ -399,6 +410,7 @@ export default {
             this.PaginatedCharts = this.filteredCharts.slice(start, end);
 
             this.GetAverage(filtered);
+            this.Loading = false;
         },
         GetAverage(charts) {
             let validFuelConsumption = [];
