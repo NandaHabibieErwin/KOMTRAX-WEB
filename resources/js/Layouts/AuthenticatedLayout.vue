@@ -7,14 +7,15 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link } from '@inertiajs/vue3';
+import Footer from '@/Components/Footer.vue';
 
 const showingNavigationDropdown = ref(false);
 </script>
 
 <template>
     <div>
-        <div class="min-h-screen bg-gray-100">
-            <nav class="bg-[#FFD500] border-b border-gray-100">
+        <div class="min-h-screen bg-lightgray">
+            <nav class="bg-yellow border-b border-gray">
                 <!-- Primary Navigation Menu -->
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between h-16">
@@ -136,5 +137,6 @@ const showingNavigationDropdown = ref(false);
                 <slot />
             </main>
         </div>
+        <Footer/>
     </div>
 </template>

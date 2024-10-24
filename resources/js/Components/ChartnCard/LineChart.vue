@@ -3,39 +3,57 @@
         <div class="w-full m-0 p-0" style="width: 100vw; margin-top:0; padding-top:0;">
             <v-sheet elevation="4">
             </v-sheet>
+
             <v-sheet elevation="6">
                 <v-tabs bg-color="red" next-icon="mdi-arrow-right-bold-box-outline"
                     prev-icon="mdi-arrow-left-bold-box-outline" show-arrows>
                     <v-tab key="all" @click="handleTabChange('all')">All</v-tab>
                     <v-tab v-for="(filter, i) in filters" :key="i" :text="filter.nama_filter"
                         @click="handleTabChange(i)"></v-tab>
-
                 </v-tabs>
-                <ManageEnrollForm :SelectedFilter="SelectedFilter" :UpdateDisplay="UpdateDisplay" :IsAllTab="IsAllTab">
-                </ManageEnrollForm>
             </v-sheet>
+
             <v-sheet elevation="6">
-                <v-tabs v-model="SelectedSeriesTab">
+                <v-tabs align-tabs="center" v-model="SelectedSeriesTab">
                     <v-tab>Working Hours</v-tab>
                     <v-tab>Fuel Consumption</v-tab>
                     <v-tab>Idling Ratio</v-tab>
                     <v-tab>E Mode</v-tab>
                     <v-tab>P Mode</v-tab>
                 </v-tabs>
-                <v-progress-circular v-if="Loading" indeterminate color="primary" class="my-3"></v-progress-circular>
-                <EnrollCard v-if="!Loading" :averageFuelConsumption="averageFuelConsumption"
-                    :averageIdlingRatio="averageIdlingRatio" :averagePModeRatio="averagePModeRatio" />
+
             </v-sheet>
         </div>
-        <Grid v-if="!Loading" :charts="PaginatedCharts" :SelectedSeries="SelectedSeries"></Grid>
+        <div>
+            <v-progress-circular v-if="Loading" indeterminate color="primary" class="my-3"></v-progress-circular>
+            <EnrollCard v-if="!Loading" :averageFuelConsumption="averageFuelConsumption"
+                :averageIdlingRatio="averageIdlingRatio" :averagePModeRatio="averagePModeRatio" />
+
+            <div class="w-screen">
+                <Grid v-if="!Loading" :charts="PaginatedCharts" :SelectedSeries="SelectedSeries"></Grid>
+            </div>
+        </div>
+
+
         <v-row v-if="!Loading">
             <v-col cols="12">
                 <v-pagination class="pagination mb-2" v-model="page" :length="TotalPages" total-visible="7"
                     @input="UpdatePaginatedCharts"></v-pagination>
             </v-col>
         </v-row>
+
+
+
+        <EnrollForm :handleTabChange="handleTabChange" :filters="filters" :UpdateDisplay="UpdateDisplay" />
+        <ManageEnrollForm :SelectedFilter="SelectedFilter" :UpdateDisplay="UpdateDisplay"
+        :handleTabChange="handleTabChange" :IsAllTab="IsAllTab" />
+
+
+
+
     </v-container>
 </template>
+
 
 <script>
 import * as XLSX from 'xlsx';
@@ -43,12 +61,14 @@ import { UploadExcelFile, LoadExcelFile } from '@/excel';
 import Grid from '@/Components/ChartnCard/Grid.vue';
 import ManageEnrollForm from '@/Components/ManageEnrollForm.vue';
 import EnrollCard from './EnrollCard.vue';
+import EnrollForm from '../EnrollForm.vue';
 
 export default {
     components: {
         Grid,
         ManageEnrollForm,
-        EnrollCard
+        EnrollCard,
+        EnrollForm
     },
     data() {
         return {

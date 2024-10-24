@@ -1,8 +1,11 @@
 // Vuetify
 import "vuetify/styles";
 import { createVuetify } from "vuetify";
+import { aliases, mdi } from 'vuetify/iconsets/mdi';
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
+
+import '@mdi/font/css/materialdesignicons.css';
 
 const customeTheme = {
     dark: false,
@@ -15,7 +18,7 @@ const customeTheme = {
         success: "#4CAF50",
         warning: "#FFC107",
         lightblue: "#14c6FF",
-        yellow: "#FFCF00",
+        yellow: "#FFD500",
         pink: "#FF1976",
         orange: "#FF8657",
         magenta: "#C33AFC",
@@ -25,7 +28,7 @@ const customeTheme = {
         green: "#2ED47A",
         red: "#FF5c4E",
         darkblueshade: "#308DC2",
-        lightgray: "#BDBDBD",
+        lightgray: "#f3f4f6",
         lightpink: "#FFCFE3",
         white: "#FFFFFF",
         muted: "#6c757d",
@@ -39,6 +42,13 @@ const vuetify = createVuetify({
         defaultTheme: "customeTheme",
         themes: {
             customeTheme,
+        },
+    },
+    icons: {
+        defaultSet: "mdi",
+        aliases,
+        sets: {
+            mdi,
         },
     },
 });

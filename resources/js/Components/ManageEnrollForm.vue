@@ -1,34 +1,36 @@
 <template>
-    <div class="pa-4 text-center">
+    <div class="pa-4 text-left w-screen">
         <v-dialog v-model="dialog" max-width="600">
             <template v-slot:activator="{ props: activatorProps }">
-                <v-btn v-if="!IsAllTab" :disabled="IsAllTab" class="text-none font-weight-regular"
-                    prepend-icon="mdi-account" text="Edit Profile" variant="tonal" v-bind="activatorProps"></v-btn>
+                <v-fab v-if="!IsAllTab" :disabled="IsAllTab" class="position-fixed bottom-0 right-0 mb-28 mr-20 text-none font-weight-regular"
+                    icon="mdi-pen" color="green" variant="outlined" v-bind="activatorProps"></v-fab>
+
             </template>
 
             <v-card>
                 <v-card-title>
-                    <v-icon left>mdi-account</v-icon>
-                    Enroll
+                    <v-icon left>mdi-pen</v-icon>
+                   Edit Enroll
                 </v-card-title>
 
                 <v-card-text>
 
                     <v-form ref="formRef" v-model="valid">
                         <v-row dense>
-                            <v-col cols="12" md="4" sm="6">
+                         <!--   <v-col cols="12" md="4" sm="6">
                                 <v-text-field v-model="filter.target" label="Target"></v-text-field>
                             </v-col>
-
+-->
                             <v-col cols="12" md="4" sm="6">
                                 <v-text-field v-model="filter.nama_filter" label="Nama Filter*"
                                     :rules="[v => !!v || 'Nama Filter is required']" required></v-text-field>
                             </v-col>
-
-                            <v-col cols="12" md="4" sm="6">
-                                <v-text-field hint="1,2,3" v-model="filter.machine" label="Mesin"
+                        </v-row>
+                        <V-row>
+                            <v-col cols="12" md="9" sm="9">
+                                <v-textarea hint="1,2,3" v-model="filter.machine" label="Mesin"
                                     placeholder="Enter machine IDs"
-                                    :rules="[v => !!v || 'Mesin is required']"></v-text-field>
+                                    :rules="[v => !!v || 'Mesin is required']"></v-textarea>
                             </v-col>
                         </v-row>
 
@@ -84,6 +86,7 @@ export default {
             default: () => ({ nama_filter: '', machine: '' }),
         },
         UpdateDisplay: Function,
+        handleTabChange: Function,
         IsAllTab: {
             type: Boolean,
             default: false,
@@ -153,6 +156,7 @@ export default {
                 confirmDialog.value = false;
                 dialog.value = false;
                 props.UpdateDisplay(null, filter.id);
+                props.handleTabChange('all');
             } catch (error) {
                 console.error('Failed:', error);
             } finally {

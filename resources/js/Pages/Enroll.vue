@@ -17,8 +17,8 @@ import EnrollForm from '@/Components/EnrollForm.vue';
 
         <div>
             <div class="max-w-9xl mx-1 sm:px-4 lg:px-5">
-                <div class="bg-gray-100 overflow-hidden shadow-sm sm:rounded-lg">
-                    <EnrollForm @filterSaved="addFilterToTabs"/>
+                <div class="overflow-hidden shadow-sm sm:rounded-lg">
+                   <!--    -->
                     <UnitChart class="mx-0 px-0 w-max"></UnitChart>
                 </div>
             </div>

@@ -1,12 +1,12 @@
 <script setup>
-import LineChart from '@/Components/ChartnCard/LineChart.vue';
 import Card from '@/Components/ChartnCard/Card.vue';
 
 </script>
 
 
     <template>
-        <v-row dense>
+
+        <v-row no-gutters>
             <v-col v-for="(chart, index) in charts" :key="index" class="py-3">
                 <Card :chart="chart" :SelectedSeries="SelectedSeries" />
 

@@ -1,6 +1,6 @@
 <template>
-    <v-row class="pb-5 mb-2 px-3">
-        <v-col cols="12">
+    <v-row class="pb-5 w-max mt-5 px-3">
+        <v-col cols="21" class=" d-flex w-96 justify-center align-center">
             <v-card v-if="hasAverages">
                 <v-card-title>{{ cardTitle }}</v-card-title>
                 <v-card-text>

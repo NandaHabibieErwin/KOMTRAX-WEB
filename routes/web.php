@@ -4,7 +4,6 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\EnrollController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UnitTrackerController;
-use App\Http\Middleware\CheckRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
