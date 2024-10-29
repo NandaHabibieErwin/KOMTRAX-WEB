@@ -36,7 +36,7 @@ const ChartType = computed(() =>  {
 </script>
 
 <template>
-  <v-card class="mr-2 w-96">
+  <v-card class="w-full">
     <v-card-item>
         <v-card-title>
             {{ chart.ChartTitle }}

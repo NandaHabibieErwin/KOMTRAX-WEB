@@ -1,5 +1,5 @@
 <template>
     <v-footer>
-        Komweb - By Nanda Habibie Erwin
+        Komtrax E-Dashboard | Developed by Nanda Habibie Erwin
     </v-footer>
     </template>

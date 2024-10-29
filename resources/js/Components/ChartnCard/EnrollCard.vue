@@ -1,7 +1,8 @@
 <template>
-    <v-row class="pb-5 w-max mt-5 px-3">
-        <v-col cols="21" class=" d-flex w-96 justify-center align-center">
-            <v-card v-if="hasAverages">
+    <v-container fluid>
+        <v-row class="pb-5 mt-5" justify="center">
+            <v-col cols="12">
+                <v-card v-if="hasAverages" class="w-screen">
                 <v-card-title>{{ cardTitle }}</v-card-title>
                 <v-card-text>
                     <div v-if="averageFuelConsumption !== null && averageFuelConsumption !== 0">
@@ -17,6 +18,7 @@
             </v-card>
         </v-col>
     </v-row>
+    </v-container>
 </template>
 
 <script>

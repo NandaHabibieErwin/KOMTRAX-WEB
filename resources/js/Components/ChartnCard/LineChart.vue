@@ -1,5 +1,7 @@
 <template>
     <v-container @tab-status-changed="UpdateTabStatus">
+        <v-text-field v-model="startDate" label="Start Date" type="date" @change="filterDate"></v-text-field>
+        <v-text-field v-model="endDate" label="End Date" type="date" @change="filterDate"></v-text-field>
         <div class="w-full m-0 p-0" style="width: 100vw; margin-top:0; padding-top:0;">
             <v-sheet elevation="4">
             </v-sheet>
@@ -46,7 +48,7 @@
 
         <EnrollForm :handleTabChange="handleTabChange" :filters="filters" :UpdateDisplay="UpdateDisplay" />
         <ManageEnrollForm :SelectedFilter="SelectedFilter" :UpdateDisplay="UpdateDisplay"
-        :handleTabChange="handleTabChange" :IsAllTab="IsAllTab" />
+            :handleTabChange="handleTabChange" :IsAllTab="IsAllTab" />
 
 
 
@@ -87,6 +89,8 @@ export default {
             averageIdlingRatio: null,
             averagePModeRatio: null,
             Loading: false,
+            startDate: null,
+            endDate: null,
         };
     },
     watch: {
@@ -95,7 +99,7 @@ export default {
         },
         SelectedSeriesTab(newTab) {
             this.updateSeries(newTab);
-        }
+        },
     },
     computed: {
         TotalPages() {
@@ -109,6 +113,18 @@ export default {
         this.handleTabChange('all');
     },
     methods: {
+        filterDate()
+        {
+            if (this.startDate && this.endDate) {
+            console.log("Filtering between", this.startDate, "and", this.endDate);
+            this.processFile(this.fileUrl); // Ensure fileUrl is available here
+            this.UpdatePaginatedCharts();
+        } else {
+            console.log("Showing all data as startDate or endDate is missing");
+            this.processFile(this.fileUrl); // Process without filtering if dates are not set
+            this.UpdatePaginatedCharts();
+        }
+        },
         addFilterToTabs(newFilter) {
             this.filters.push(newFilter);
             this.SelectedFilter = newFilter;
@@ -197,7 +213,7 @@ export default {
                 const data = await response.arrayBuffer();
 
                 const workbook = XLSX.read(data, { type: 'array' });
-
+                this.charts = [];
                 workbook.SheetNames.forEach((sheetName, sheetIndex) => {
                     if (sheetIndex <= 1) return;
                     const worksheet = workbook.Sheets[sheetName];
@@ -206,8 +222,23 @@ export default {
 
                     const header = jsonData[0];
 
+                    //  const startDate = '2024-10-01';
+                    //  const endDate = '2024-10-29';
 
-                    const sortedData = jsonData.slice(1).sort((a, b) => {
+                    const filteredData = jsonData.slice(1).filter(row => {
+                        const dateStr = row[7] || '';
+                        const dateObj = new Date(dateStr);
+                        if (this.startDate && this.endDate) {
+                            console.log("filtered"+this.startDate + "To" + this.endDate);
+                            return dateObj >= new Date(this.startDate) && dateObj <= new Date(this.endDate);
+
+                        }
+                        console.log("all or filtered");
+
+                        return true;
+                    });
+                    console.log(filteredData);
+                    const sortedData = filteredData.slice(1).sort((a, b) => {
                         const dateA = a[7] ? new Date(a[7]) : null;
                         const dateB = b[7] ? new Date(b[7]) : null;
 
@@ -218,9 +249,7 @@ export default {
                         return dateA ? 1 : (dateB ? -1 : 0);
                     });
 
-
                     const sortedJsonData = [header, ...sortedData];
-
 
                     //                    console.log(sortedJsonData);
 
@@ -238,7 +267,8 @@ export default {
                     const CustomerMachine = sortedJsonData.slice(1).map(row => row[10] || 0).slice(-1);
                     const Model = sortedJsonData.slice(1).map(row => row[2] || 0).slice(-1);
                     const SerialNumber = sortedJsonData.slice(1).map(row => row[4] || 0).slice(-1);
-                    const FilterSerialNumber = sortedJsonData[1][4] || '';
+                    //const FilterSerialNumber = sortedJsonData[1][4] || '';
+                    const FilterSerialNumber = sortedJsonData[1]?.[4] || '';
                     const SMR = sortedJsonData.slice(1).map(row => row[11] || 0).slice(-1);
                     const FuelConsumption = sortedJsonData.slice(1).map(row => row[12] || 0);
                     const IdlingHour = sortedJsonData.slice(1).map(row => row[13] || 0);
