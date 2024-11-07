@@ -1,7 +1,6 @@
 <template>
     <v-container @tab-status-changed="UpdateTabStatus">
-        <v-text-field v-model="startDate" label="Start Date" type="date" @change="filterDate"></v-text-field>
-        <v-text-field v-model="endDate" label="End Date" type="date" @change="filterDate"></v-text-field>
+
         <div class="w-full m-0 p-0" style="width: 100vw; margin-top:0; padding-top:0;">
             <v-sheet elevation="4">
             </v-sheet>
@@ -25,9 +24,23 @@
                 </v-tabs>
 
             </v-sheet>
+
         </div>
         <div>
-            <v-progress-circular v-if="Loading" indeterminate color="primary" class="my-3"></v-progress-circular>
+            <v-progress-circular v-if="Loading" indeterminate color="primary"
+                class=" mt-4 pt-4 my-3"></v-progress-circular>
+            <div v-if="!Loading" class="mt-2 pt-2">
+                <v-row>
+                    <v-col cols="5" sm="3" md="2">
+                        <v-text-field v-model="startDate" label="Start Date" variant="outlined" type="date"
+                            @change="filterDate"></v-text-field>
+                    </v-col>
+                    <v-col cols="5" sm="3" md="2">
+                        <v-text-field v-model="endDate" label="End Date" variant="outlined" type="date"
+                            @change="filterDate"></v-text-field>
+                    </v-col>
+                </v-row>
+            </div>
             <EnrollCard v-if="!Loading" :averageFuelConsumption="averageFuelConsumption"
                 :averageIdlingRatio="averageIdlingRatio" :averagePModeRatio="averagePModeRatio" />
 
@@ -113,17 +126,16 @@ export default {
         this.handleTabChange('all');
     },
     methods: {
-        filterDate()
-        {
+        filterDate() {
             if (this.startDate && this.endDate) {
-            console.log("Filtering between", this.startDate, "and", this.endDate);
-            this.processFile(this.fileUrl); // Ensure fileUrl is available here
-            this.UpdatePaginatedCharts();
-        } else {
-            console.log("Showing all data as startDate or endDate is missing");
-            this.processFile(this.fileUrl); // Process without filtering if dates are not set
-            this.UpdatePaginatedCharts();
-        }
+                console.log("Filtering between", this.startDate, "and", this.endDate);
+                this.processFile(this.fileUrl); // Ensure fileUrl is available here
+                this.UpdatePaginatedCharts();
+            } else {
+                console.log("Showing all data as startDate or endDate is missing");
+                this.processFile(this.fileUrl); // Process without filtering if dates are not set
+                this.UpdatePaginatedCharts();
+            }
         },
         addFilterToTabs(newFilter) {
             this.filters.push(newFilter);
@@ -215,21 +227,16 @@ export default {
                 const workbook = XLSX.read(data, { type: 'array' });
                 this.charts = [];
                 workbook.SheetNames.forEach((sheetName, sheetIndex) => {
-                    if (sheetIndex <= 1) return;
+                    if (sheetIndex < -9) return;
                     const worksheet = workbook.Sheets[sheetName];
                     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-
                     const header = jsonData[0];
 
-                    //  const startDate = '2024-10-01';
-                    //  const endDate = '2024-10-29';
-
-                    const filteredData = jsonData.slice(1).filter(row => {
+                    const filteredData = jsonData.filter(row => {
                         const dateStr = row[7] || '';
                         const dateObj = new Date(dateStr);
                         if (this.startDate && this.endDate) {
-                            console.log("filtered"+this.startDate + "To" + this.endDate);
+                            console.log("filtered" + this.startDate + "To" + this.endDate);
                             return dateObj >= new Date(this.startDate) && dateObj <= new Date(this.endDate);
 
                         }
@@ -238,7 +245,7 @@ export default {
                         return true;
                     });
                     console.log(filteredData);
-                    const sortedData = filteredData.slice(1).sort((a, b) => {
+                    const sortedData = filteredData.sort((a, b) => {
                         const dateA = a[7] ? new Date(a[7]) : null;
                         const dateB = b[7] ? new Date(b[7]) : null;
 
@@ -292,7 +299,6 @@ export default {
                         const rowWorkingHour = row[5] || 0;
                         const rowActualWorkingHour = row[6] || 0;
                         const rowEModeActualWorkingHour = row[14] || 0;
-
                         if (!isNaN(rowEModeActualWorkingHour) && rowEModeActualWorkingHour > 0) {
                             if (rowWorkingHour === 0 || rowActualWorkingHour === 0) return 100;
                             else {
@@ -467,7 +473,6 @@ export default {
             let validIdlingRatio = [];
             let validPModeRatio = [];
 
-            // Loop through the filtered charts and collect values
             charts.forEach(chart => {
                 if (chart.series && chart.series.length > 0) {
                     chart.series.forEach(series => {
@@ -484,7 +489,7 @@ export default {
                 }
             });
 
-            // Calculate and set averages
+
             this.averageFuelConsumption = validFuelConsumption.length > 0
                 ? (validFuelConsumption.reduce((a, b) => a + b, 0) / validFuelConsumption.length).toFixed(2)
                 : 0;
@@ -494,8 +499,16 @@ export default {
                 : 0;
 
             this.averagePModeRatio = validPModeRatio.length > 0
-                ? (validPModeRatio.reduce((a, b) => a + b, 0) / validPModeRatio.length).toFixed(2)
+                ? (
+                    validPModeRatio
+                        .map(val => parseFloat(val))
+                        .filter(val => !isNaN(val))
+                        .reduce((a, b) => a + b, 0) / validPModeRatio.length
+                ).toFixed(2)
                 : 0;
+
+            console.log("average: " + this.averagePModeRatio);
+            console.log("valid: " + validPModeRatio);
 
             console.log("Averages - Fuel Consumption:", this.averageFuelConsumption, "Idling Ratio:", this.averageIdlingRatio, "PMode Ratio:", this.averagePModeRatio);
         }

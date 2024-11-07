@@ -51,7 +51,7 @@ class UnitTrackerController extends Controller
                         try {
                             $dateA = isset($a[$SortColumn]) ? \Carbon\Carbon::parse($a[$SortColumn]) : null;
                         } catch (\Exception $e) {
-                            // Log error if $a[$SortColumn] is not a valid date
+
                             \Log::error('Invalid date in $a: ' . ($a[$SortColumn] ?? 'null') . ' | Error: ' . $e->getMessage());
                             $dateA = null;
                         }
@@ -59,7 +59,7 @@ class UnitTrackerController extends Controller
                         try {
                             $dateB = isset($b[$SortColumn]) ? \Carbon\Carbon::parse($b[$SortColumn]) : null;
                         } catch (\Exception $e) {
-                            // Log error if $b[$SortColumn] is not a valid date
+
                             \Log::error('Invalid date in $b: ' . ($b[$SortColumn] ?? 'null') . ' | Error: ' . $e->getMessage());
                             $dateB = null;
                         }

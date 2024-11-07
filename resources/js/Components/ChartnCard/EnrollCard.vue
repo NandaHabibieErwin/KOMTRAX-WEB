@@ -1,6 +1,6 @@
 <template>
     <v-container fluid>
-        <v-row class="pb-5 mt-5" justify="center">
+        <v-row class="pb-5" justify="center">
             <v-col cols="12">
                 <v-card v-if="hasAverages" class="w-screen">
                 <v-card-title>{{ cardTitle }}</v-card-title>
